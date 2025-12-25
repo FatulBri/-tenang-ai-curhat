@@ -1,0 +1,20 @@
+src/app/components/Navigation.tsx(8,3): error TS6133: 'TrendingUp' is declared but its value is never read.
+src/app/components/Navigation.tsx(15,3): error TS6133: 'Sparkles' is declared but its value is never read.
+src/app/components/Navigation.tsx(72,9): error TS6133: 'NavLink' is declared but its value is never read.
+src/app/pages/HistoryPage.tsx(7,25): error TS6133: 'Moon' is declared but its value is never read.
+src/app/pages/HistoryPage.tsx(7,31): error TS6133: 'Sun' is declared but its value is never read.
+src/app/pages/HistoryPage.tsx(13,20): error TS6133: 'darkMode' is declared but its value is never read.
+src/app/pages/HistoryPage.tsx(13,30): error TS6133: 'toggleDarkMode' is declared but its value is never read.
+src/app/pages/HotlinePage.tsx(4,57): error TS6133: 'Moon' is declared but its value is never read.
+src/app/pages/HotlinePage.tsx(4,63): error TS6133: 'Sun' is declared but its value is never read.
+src/app/pages/HotlinePage.tsx(62,9): error TS6198: All destructured elements are unused.
+src/app/pages/LandingPage.tsx(2,40): error TS6133: 'Moon' is declared but its value is never read.
+src/app/pages/LandingPage.tsx(2,46): error TS6133: 'Sun' is declared but its value is never read.
+src/app/pages/LandingPage.tsx(10,9): error TS6198: All destructured elements are unused.
+src/app/pages/MoodStatsPage.tsx(5,19): error TS6133: 'Moon' is declared but its value is never read.
+src/app/pages/MoodStatsPage.tsx(5,25): error TS6133: 'Sun' is declared but its value is never read.
+src/app/pages/MoodStatsPage.tsx(28,28): error TS6133: 'toggleDarkMode' is declared but its value is never read.
+src/app/pages/ResponsePage.tsx(2,39): error TS6133: 'Moon' is declared but its value is never read.
+src/app/pages/ResponsePage.tsx(2,45): error TS6133: 'Sun' is declared but its value is never read.
+src/app/pages/ResponsePage.tsx(12,26): error TS6133: 'darkMode' is declared but its value is never read.
+src/app/pages/ResponsePage.tsx(12,36): error TS6133: 'toggleDarkMode' is declared but its value is never read.

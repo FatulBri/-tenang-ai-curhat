@@ -49,7 +49,8 @@ export async function generateAIInsights(curhats: Curhat[], moods: MoodEntry[]):
       body: JSON.stringify({
         messages: [{ role: "user", content: context }],
         persona: "psikolog",
-        systemPrompt: "Kamu adalah asisten analisis emosi AI yang bijak. Keluarkan HANYA JSON."
+        systemPrompt: "Kamu adalah asisten analisis emosi AI yang bijak. Keluarkan HANYA JSON.",
+        clientApiKey: apiKey
       })
     });
 

@@ -16,11 +16,13 @@ export default async function handler(req: Request) {
   }
 
   try {
-    const { messages, persona, systemPrompt } = await req.json();
-    const apiKey = process.env.GEMINI_API_KEY;
+    const { messages, persona, systemPrompt, clientApiKey } = await req.json();
+    const apiKey = process.env.GEMINI_API_KEY || clientApiKey;
 
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'API Key not configured on server' }), { status: 500 });
+      return new Response(JSON.stringify({ 
+        error: 'API Key not configured on server. Please add your own API Key in Settings.' 
+      }), { status: 500 });
     }
 
     let lastError = null;

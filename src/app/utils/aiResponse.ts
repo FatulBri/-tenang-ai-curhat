@@ -49,6 +49,8 @@ export async function generateAIResponse(messages: { role: string, content: stri
   const systemPrompt = getSystemPrompt(persona);
 
   try {
+    const localApiKey = localStorage.getItem("gemini_api_key") || "";
+
     const response = await fetch(API_ENDPOINT, {
       method: "POST",
       headers: {
@@ -60,7 +62,8 @@ export async function generateAIResponse(messages: { role: string, content: stri
           content: m.content
         })),
         persona,
-        systemPrompt
+        systemPrompt,
+        clientApiKey: localApiKey
       })
     });
 

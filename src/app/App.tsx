@@ -7,8 +7,10 @@ import { MoodTrackerPage } from "./pages/MoodTrackerPage";
 import { MoodStatsPage } from "./pages/MoodStatsPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { HotlinePage } from "./pages/HotlinePage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { PanicButton } from "./components/PanicButton";
 import { AmbientPlayer } from "./components/AmbientPlayer";
+import { OnboardingModal } from "./components/OnboardingModal";
 import { Toaster } from "sonner";
 import { useEffect } from "react";
 
@@ -21,7 +23,8 @@ export default function App() {
     <AppProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <div className="min-h-screen">
-          <Toaster position="top-center" richColors />
+          <Toaster position="top-right" richColors closeButton />
+          <OnboardingModal />
           <AmbientPlayer />
 
           <Routes>
@@ -32,6 +35,7 @@ export default function App() {
             <Route path="/mood-stats" element={<MoodStatsPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/hotline" element={<HotlinePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
 
           {/* Floating Panic Button - visible on all pages except hotline */}

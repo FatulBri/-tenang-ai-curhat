@@ -12,19 +12,9 @@ import {
   ChevronDown,
   BarChart3,
   Settings as SettingsIcon,
-  ExternalLink,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./ui/dialog";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+import { useNotification } from "../utils/useNotification";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,8 +26,9 @@ import {
 export function Navigation() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { darkMode, toggleDarkMode, curhats, moods, apiKey, setApiKey } = useApp();
+  const { darkMode, toggleDarkMode, curhats, moods, apiKey, notificationsEnabled } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  useNotification(notificationsEnabled);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -70,7 +61,7 @@ export function Navigation() {
 
 
   return (
-    <header className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-gray-200 dark:border-slate-700">
+    <header className="bg-white/60 dark:bg-[#030213]/60 backdrop-blur-2xl shadow-sm sticky top-0 z-50 border-b border-white/20 dark:border-white/5 transition-colors duration-500">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -152,52 +143,19 @@ export function Navigation() {
 
             <DropdownMenuSeparator className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2" />
 
-            {/* Settings Dialog */}
-            <Dialog>
-              <DialogTrigger asChild>
-                <button
-                  className="p-2 rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
-                  aria-label="Settings"
-                >
-                  <SettingsIcon className={`w-5 h-5 ${apiKey ? "text-teal-600 dark:text-teal-400" : "text-gray-500"}`} />
-                </button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
-                <DialogHeader>
-                  <DialogTitle className="text-gray-900 dark:text-gray-100">Pengaturan API</DialogTitle>
-                  <DialogDescription className="text-gray-500 dark:text-gray-400">
-                    Masukkan API Key Google Gemini Anda untuk mengaktifkan fitur chat AI.
-                    Key ini hanya disimpan di browser Anda (localStorage).
-                    <br />
-                    <a
-                      href="https://aistudio.google.com/app/apikey"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-teal-600 dark:text-teal-400 hover:underline inline-flex items-center mt-2 group"
-                    >
-                      Dapatkan API Key Gratis
-                      <ExternalLink className="w-3 h-3 ml-1 group-hover:translate-x-0.5 transition-transform" />
-                    </a>
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="apiKey" className="text-gray-700 dark:text-gray-300">Gemini API Key</Label>
-                    <Input
-                      id="apiKey"
-                      type="password"
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      placeholder="AIza..."
-                      className="bg-gray-50 dark:bg-slate-900 border-gray-200 dark:border-slate-600"
-                    />
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Biarkan kosong untuk menggunakan mode Demo (Response Terbatas/Mock).
-                    </p>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <DropdownMenuSeparator className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2" />
+            
+            {/* Settings Link */}
+            <button
+              onClick={() => navigate("/settings")}
+              className={`p-2 rounded-lg transition-colors ${isActive("/settings")
+                ? "bg-teal-500 text-white shadow-lg"
+                : "bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600"
+                }`}
+              aria-label="Settings"
+            >
+              <SettingsIcon className={`w-5 h-5 ${isActive("/settings") ? "text-white" : apiKey ? "text-teal-600 dark:text-teal-400" : "text-gray-500"}`} />
+            </button>
 
             {/* Dark Mode Toggle */}
             <button
@@ -311,6 +269,19 @@ export function Navigation() {
                 >
                   <Phone className="w-5 h-5" />
                   <span className="flex-1 text-left">Bantuan Darurat</span>
+                </button>
+                <button
+                  onClick={() => {
+                    navigate("/settings");
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive("/settings")
+                    ? "bg-slate-900 dark:bg-slate-700 text-white"
+                    : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800"
+                    }`}
+                >
+                  <SettingsIcon className="w-5 h-5" />
+                  <span className="flex-1 text-left">Pengaturan</span>
                 </button>
               </div>
             </div>

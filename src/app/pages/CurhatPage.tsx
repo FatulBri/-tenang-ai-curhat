@@ -1,6 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Send } from "lucide-react";
+import { Send, Mic, Square, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import {
@@ -11,29 +11,35 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { useApp } from "../context/AppContext";
-import { generateAIResponse } from "../utils/aiResponse";
+import { generateAIResponse, mapAIMoodToKey } from "../utils/aiResponse";
 import { Navigation } from "../components/Navigation";
 import { Footer } from "../components/Footer";
+import { motion, AnimatePresence } from "framer-motion";
+import { CrisisBanner } from "../components/CrisisBanner";
 
 export function CurhatPage() {
   const navigate = useNavigate();
-  const { addCurhat, setCurrentCurhat } = useApp();
+  const { addCurhat, setCurrentCurhat, addMood } = useApp();
   const [message, setMessage] = useState("");
-  const [category, setCategory] = useState("");
-  const [selectedMood, setSelectedMood] = useState("😊");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const moodOptions = [
-    { emoji: "😊", label: "Bahagia", value: "happy" },
-    { emoji: "😢", label: "Sedih", value: "sad" },
-    { emoji: "😰", label: "Cemas", value: "anxious" },
-    { emoji: "😡", label: "Marah", value: "angry" },
-    { emoji: "😐", label: "Netral", value: "neutral" },
-    { emoji: "😕", label: "Bingung", value: "confused" },
-  ];
-  /* Speech Recognition Logic */
+  const [persona, setPersona] = useState("psikolog");
   const [isListening, setIsListening] = useState(false);
+  const [zenMode, setZenMode] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea
+  const autoResize = useCallback(() => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = Math.min(el.scrollHeight, 384) + "px";
+    }
+  }, []);
+
+  useEffect(() => {
+    autoResize();
+  }, [message, autoResize]);
 
   const handleMicClick = () => {
     if (isListening) {
@@ -73,6 +79,7 @@ export function CurhatPage() {
       recognition.start();
     }
   };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || isSubmitting) return;
@@ -80,168 +87,234 @@ export function CurhatPage() {
     setIsSubmitting(true);
 
     try {
-      // AI Processing
-      const aiResponseText = await generateAIResponse(message);
+      const now = new Date().toISOString();
+      const initialUserMsg = { role: "user" as const, content: message, timestamp: now };
+      const aiResult = await generateAIResponse([initialUserMsg], persona);
 
       const newCurhat = {
         id: Date.now().toString(),
-        message,
-        aiResponse: aiResponseText,
+        messages: [
+          initialUserMsg,
+          { role: "model" as const, content: aiResult.aiResponse, timestamp: new Date().toISOString() }
+        ],
         timestamp: new Date(),
-        mood: selectedMood,
-        category,
+        mood: aiResult.mood,
+        category: aiResult.category,
+        persona,
       };
 
+
       addCurhat(newCurhat);
+      
+      // Auto-add to Mood Tracker
+      const moodKey = mapAIMoodToKey(aiResult.mood);
+      addMood({
+        id: Date.now().toString() + "_auto",
+        mood: moodKey,
+        date: new Date()
+      });
+
       setCurrentCurhat(newCurhat);
 
-      // Navigate to AI Response page
       navigate("/response");
     } catch (error) {
       console.error("Error submitting curhat:", error);
-      // Optional: Show toast error here if using sonner/toast
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-300 flex flex-col">
-      <Navigation />
+    <div className={`min-h-screen transition-colors duration-500 flex flex-col relative z-0 ${
+      zenMode
+        ? "bg-[#0a0a0f]"
+        : "bg-[#fafafc] dark:bg-[#030213]"
+    }`}>
+      {!zenMode && <Navigation />}
 
-      <main className="max-w-3xl mx-auto px-6 py-8 flex-1">
-        <Card className="p-8 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm shadow-2xl border-teal-100 dark:border-slate-700">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Title */}
-            <div className="text-center mb-6">
-              <h1 className="text-3xl text-gray-800 dark:text-gray-100 mb-2">
-                Ceritakan Perasaanmu
-              </h1>
-              <p className="text-gray-600 dark:text-gray-300">
-                Ruang aman untukmu berbagi, anonim dan rahasia
-              </p>
-            </div>
-
-            {/* Mood Selector */}
-            <div>
-              <label className="block mb-3 text-gray-700 dark:text-gray-200">
-                Bagaimana perasaanmu saat ini?
-              </label>
-              <div className="flex flex-wrap gap-3">
-                {moodOptions.map((mood) => (
-                  <button
-                    key={mood.value}
-                    type="button"
-                    onClick={() => setSelectedMood(mood.emoji)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${selectedMood === mood.emoji
-                      ? "bg-teal-500 text-white shadow-lg scale-105"
-                      : "bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-slate-600"
-                      }`}
-                  >
-                    <span className="text-xl">{mood.emoji}</span>
-                    <span className="text-sm">{mood.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Category Selector (Optional) */}
-            <div>
-              <label className="block mb-2 text-gray-700 dark:text-gray-200">
-                Kategori (opsional)
-              </label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="w-full bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600">
-                  <SelectValue placeholder="Pilih kategori..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="relationship">Hubungan</SelectItem>
-                  <SelectItem value="work">Pekerjaan</SelectItem>
-                  <SelectItem value="family">Keluarga</SelectItem>
-                  <SelectItem value="health">Kesehatan</SelectItem>
-                  <SelectItem value="personal">Pribadi</SelectItem>
-                  <SelectItem value="other">Lainnya</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Message Textarea */}
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label htmlFor="curhat-message" className="block text-gray-700 dark:text-gray-200">
-                  Tulis ceritamu di sini...
-                </label>
+      <main className="max-w-3xl mx-auto px-6 py-12 flex-1 relative z-10 w-full flex flex-col justify-center">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, type: "spring" as any, stiffness: 100 }}
+        >
+          <Card className={`p-8 md:p-10 backdrop-blur-2xl shadow-2xl rounded-3xl relative overflow-hidden group ${
+            zenMode
+              ? "bg-[#111118]/90 border border-white/5"
+              : "bg-white/70 dark:bg-slate-900/60 border border-white/50 dark:border-white/5"
+          }`}>
+            <div className="absolute inset-0 bg-gradient-to-br from-teal-50/50 to-purple-50/50 dark:from-teal-900/10 dark:to-purple-900/10 pointer-events-none"></div>
+            
+            <form onSubmit={handleSubmit} className="relative z-10 space-y-8">
+              {/* Title + Zen Toggle */}
+              <div className="text-center mb-8 relative">
+                <h1 className={`text-3xl md:text-4xl font-bold mb-3 ${
+                  zenMode
+                    ? "text-white/90 font-serif"
+                    : "bg-clip-text text-transparent bg-gradient-to-r from-teal-600 to-purple-600 dark:from-teal-400 dark:to-purple-400"
+                }`}>
+                  Ceritakan Perasaanmu
+                </h1>
+                <p className={zenMode ? "text-white/40" : "text-gray-600 dark:text-gray-400 font-medium"}>
+                  Ruang aman untuk berdialog. Bebas, anonim, rahasia.
+                </p>
+                {/* Zen toggle */}
                 <button
                   type="button"
-                  onClick={handleMicClick}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${isListening
-                    ? "bg-red-100 text-red-600 animate-pulse border border-red-200"
-                    : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200"
-                    }`}
+                  onClick={() => setZenMode(z => !z)}
+                  className={`absolute right-0 top-0 p-2 rounded-xl transition-all ${
+                    zenMode
+                      ? "text-white/40 hover:text-white/80 hover:bg-white/10"
+                      : "text-gray-400 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20"
+                  }`}
+                  title={zenMode ? "Keluar Zen Mode" : "Aktifkan Zen Mode"}
                 >
-                  {isListening ? (
-                    <>
-                      <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                      Mendengarkan...
-                    </>
-                  ) : (
-                    <>
-                      🎤 Rekam Suara
-                    </>
-                  )}
+                  {zenMode ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
                 </button>
               </div>
-              <textarea
-                id="curhat-message"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Apa yang ada di pikiranmu? Kamu aman di sini, semuanya anonim dan terjaga kerahasiaannya."
-                className="w-full min-h-[200px] p-4 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:border-teal-400 dark:focus:border-teal-500 focus:ring-2 focus:ring-teal-200 dark:focus:ring-teal-900 focus:outline-none resize-none transition-all"
-                disabled={isSubmitting}
-              />
-            </div>
 
-            {/* Character Count & Submit */}
-            <div className="flex items-center justify-between pt-4">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {message.length} karakter
-              </p>
-              <Button
-                type="submit"
-                disabled={!message.trim() || isSubmitting}
-                className="bg-gradient-to-r from-teal-500 to-purple-500 hover:from-teal-600 hover:to-purple-600 text-white px-8 py-3 rounded-full shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Memproses...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-5 h-5 mr-2" />
-                    Kirim Curhat
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </Card>
+              {/* Persona Selector - Hidden in Zen Mode */}
+              {!zenMode && (
+              <div className="space-y-3">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Teman Bicara AI
+                </label>
+                <Select value={persona} onValueChange={setPersona}>
+                  <SelectTrigger className="w-full bg-white/50 dark:bg-slate-800/50 border-purple-200/50 dark:border-purple-900/50 text-purple-700 dark:text-purple-300 rounded-xl h-12 focus:ring-2 focus:ring-purple-500/50">
+                    <SelectValue placeholder="Pilih karakter AI..." />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-gray-200 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl">
+                    <SelectItem value="psikolog">👩‍⚕️ Psikolog Profesional</SelectItem>
+                    <SelectItem value="sahabat">👦 Sahabat Gaul</SelectItem>
+                    <SelectItem value="orang_tua">👴 Orang Tua Bijak</SelectItem>
+                    <SelectItem value="motivator">🔥 Motivator Enerjik</SelectItem>
+                    <SelectItem value="guru">📚 Guru Bijaksana</SelectItem>
+                    <SelectItem value="kakak">🤗 Kakak Pengertian</SelectItem>
+                    <SelectItem value="filosof">🌙 Filosof Reflektif</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              )}
+
+              {/* Crisis Detection Banner */}
+              <CrisisBanner text={message} />
+
+              {/* Message Textarea */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <label htmlFor="curhat-message" className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    Ceritamu...
+                  </label>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    type="button"
+                    onClick={handleMicClick}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all ${isListening
+                      ? "bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.5)] border-transparent"
+                      : "bg-white/80 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 border border-gray-200 dark:border-slate-700"
+                      }`}
+                  >
+                    {isListening ? (
+                      <><Square className="w-3.5 h-3.5 fill-current" /> Berhenti rekam</>
+                    ) : (
+                      <><Mic className="w-3.5 h-3.5" /> Rekam suara</>
+                    )}
+                  </motion.button>
+                </div>
+                
+                <div className="relative group">
+                  {/* Glowing border effect */}
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-teal-400 to-purple-500 rounded-2xl blur opacity-0 group-focus-within:opacity-30 transition duration-500"></div>
+                  <textarea
+                    id="curhat-message"
+                    ref={textareaRef}
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Apa yang memberatkan langkahmu hari ini? Ceritakan pelan-pelan..."
+                    className="relative w-full min-h-[180px] p-5 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-gray-800 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none resize-none transition-all z-10 leading-relaxed overflow-hidden"
+                    disabled={isSubmitting}
+                  />
+                  {/* Mic pulse effect layout */}
+                  <AnimatePresence>
+                    {isListening && (
+                      <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 border-2 border-red-500 rounded-2xl z-20 pointer-events-none"
+                      >
+                         <div className="absolute right-4 bottom-4 flex items-center gap-2 text-red-500">
+                           <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
+                           <span className="text-xs font-bold uppercase tracking-wider">Listening</span>
+                         </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              {/* Character Count & Submit */}
+              <div className="flex flex-col sm:flex-row items-center justify-between pt-2 gap-4">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 order-2 sm:order-1">
+                  {message.length} karakter dicatat
+                </p>
+                <Button
+                  type="submit"
+                  disabled={!message.trim() || isSubmitting}
+                  className="w-full sm:w-auto bg-gradient-to-r from-teal-500 to-purple-600 hover:from-teal-400 hover:to-purple-500 text-white px-8 py-6 rounded-xl font-semibold shadow-[0_0_20px_rgba(20,184,166,0.2)] hover:shadow-[0_0_30px_rgba(168,85,247,0.3)] transition-all disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2 group relative overflow-hidden"
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      Analisis AI Berjalan...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2 relative z-10">
+                      Utarakan Perasaan <Send className="w-4 h-4 group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform" />
+                    </span>
+                  )}
+                  <div className="absolute inset-0 bg-white/20 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-300"></div>
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </motion.div>
 
         {/* Info Box */}
-        <div className="mt-6 p-4 bg-teal-50 dark:bg-teal-900/30 border border-teal-200 dark:border-teal-800 rounded-xl">
-          <p className="text-sm text-teal-800 dark:text-teal-200 text-center">
-            💙 Semua curhat bersifat anonim dan tidak disimpan secara permanen. Kamu bisa berbagi dengan bebas.
-          </p>
-        </div>
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="mt-8 mx-auto self-center"
+        >
+          <div className="inline-flex items-center justify-center px-6 py-3 bg-teal-500/10 dark:bg-teal-500/20 backdrop-blur-md rounded-full border border-teal-200/50 dark:border-teal-700/50">
+             <span className="text-xs font-medium text-teal-800 dark:text-teal-300 text-center flex gap-2 items-center">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
+              </span>
+              AI secara otomatis mendeteksi Topik dan Emosi Anda (NLP).
+            </span>
+          </div>
+        </motion.div>
       </main>
 
-      <Footer />
+      {!zenMode && <Footer />}
 
-      {/* Background Decoration */}
+      {/* Decorative blobs */}
+      {!zenMode && (
       <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-teal-200 dark:bg-teal-900 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-xl opacity-20 animate-blob"></div>
-        <div className="absolute top-40 right-10 w-72 h-72 bg-purple-200 dark:bg-purple-900 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
+         {/* Light mode base */}
+         <div className="absolute inset-0 bg-gradient-to-b from-[#fafafc] to-white dark:hidden"></div>
+         {/* Dark mode base */}
+         <div className="absolute inset-0 bg-[#030213] hidden dark:block"></div>
+
+        {/* Glowing Orbs */}
+        <div className="absolute top-[10%] right-[10%] w-[35vw] h-[35vw] max-w-[400px] max-h-[400px] bg-teal-400/20 dark:bg-teal-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] animate-blob"></div>
+        <div className="absolute bottom-[10%] left-[10%] w-[40vw] h-[40vw] max-w-[450px] max-h-[450px] bg-purple-400/20 dark:bg-purple-800/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[120px] animate-blob animation-delay-3000"></div>
       </div>
+      )}
     </div>
   );
 }

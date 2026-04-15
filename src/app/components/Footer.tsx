@@ -2,8 +2,8 @@ import { Heart, Shield, Github } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-t border-gray-200 dark:border-slate-700 mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <footer className="bg-white/40 dark:bg-[#030213]/40 backdrop-blur-2xl border-t border-white/20 dark:border-white/5 mt-auto transition-colors duration-500 relative z-10 w-full">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-20">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Brand */}
           <div>

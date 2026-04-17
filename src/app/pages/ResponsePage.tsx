@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, TrendingUp, RefreshCw, Send, User, ChevronDown, Copy, Share2, FileDown, Check } from "lucide-react";
+import { Sparkles, TrendingUp, RefreshCw, Send, User, ChevronDown, Copy, Share2, FileDown, Check, Volume2, Pause, Play, Square } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { useApp, ChatMessage } from "../context/AppContext";
 import { generateAIResponse, mapAIMoodToKey } from "../utils/aiResponse";
 import { useTypewriter } from "../utils/useTypewriter";
+import { useTextToSpeech } from "../utils/useVoice";
 import { CrisisBanner } from "../components/CrisisBanner";
 import { Navigation } from "../components/Navigation";
 import { Footer } from "../components/Footer";
@@ -26,9 +27,15 @@ interface BubbleProps {
   msg: ChatMessage;
   isLatestAI: boolean;
   animate: boolean;
+  onSpeak?: (text: string) => void;
+  isSpeakingThis?: boolean;
+  isPausedThis?: boolean;
+  onPauseTTS?: () => void;
+  onResumeTTS?: () => void;
+  onStopTTS?: () => void;
 }
 
-function MessageBubble({ msg, isLatestAI, animate }: BubbleProps) {
+function MessageBubble({ msg, isLatestAI, animate, onSpeak, isSpeakingThis, isPausedThis, onPauseTTS, onResumeTTS, onStopTTS }: BubbleProps) {
   const { displayed, done } = useTypewriter(msg.content, isLatestAI && animate, 16);
   const text = isLatestAI && animate ? displayed : msg.content;
 
@@ -62,11 +69,57 @@ function MessageBubble({ msg, isLatestAI, animate }: BubbleProps) {
               <span className="inline-block w-0.5 h-4 bg-teal-500 ml-0.5 align-middle animate-pulse" />
             )}
           </div>
-          {msg.timestamp && (
-            <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 px-1 select-none">
-              {formatTime(msg.timestamp)}
-            </span>
-          )}
+
+          {/* Bottom row: timestamp + TTS button for AI messages */}
+          <div className="flex items-center gap-2 px-1">
+            {msg.timestamp && (
+              <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 select-none">
+                {formatTime(msg.timestamp)}
+              </span>
+            )}
+            {/* TTS controls for AI messages */}
+            {msg.role === "model" && onSpeak && (
+              <div className="flex items-center gap-1">
+                {isSpeakingThis ? (
+                  <>
+                    {isPausedThis ? (
+                      <button
+                        onClick={onResumeTTS}
+                        className="p-1 rounded-md hover:bg-teal-50 dark:hover:bg-teal-900/30 text-teal-500 transition-colors"
+                        title="Lanjutkan"
+                      >
+                        <Play className="w-3 h-3" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={onPauseTTS}
+                        className="p-1 rounded-md hover:bg-amber-50 dark:hover:bg-amber-900/30 text-amber-500 transition-colors"
+                        title="Jeda"
+                      >
+                        <Pause className="w-3 h-3" />
+                      </button>
+                    )}
+                    <button
+                      onClick={onStopTTS}
+                      className="p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 text-red-400 transition-colors"
+                      title="Berhenti"
+                    >
+                      <Square className="w-3 h-3 fill-current" />
+                    </button>
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse ml-0.5" />
+                  </>
+                ) : (
+                  <button
+                    onClick={() => onSpeak(msg.content)}
+                    className="p-1 rounded-md hover:bg-teal-50 dark:hover:bg-teal-900/30 text-gray-400 hover:text-teal-500 transition-colors group/tts"
+                    title="Dengarkan"
+                  >
+                    <Volume2 className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </motion.div>
@@ -76,17 +129,34 @@ function MessageBubble({ msg, isLatestAI, animate }: BubbleProps) {
 // ────────────────────────────────────────────────────────────────────────────
 export function ResponsePage() {
   const navigate = useNavigate();
-  const { currentCurhat, updateCurhatMessages, addMood, aiName } = useApp();
+  const { currentCurhat, updateCurhatMessages, addMood, aiName, autoTTS, ttsSpeed, ttsVoice, speechLang } = useApp();
   const [replyMessage, setReplyMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   // Track which is the "animatable" last AI message index
   const [animateIndex, setAnimateIndex] = useState<number>(-1);
   const [copied, setCopied] = useState(false);
+  const [speakingMsgIndex, setSpeakingMsgIndex] = useState<number>(-1);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // TTS Hook
+  const {
+    isSpeaking,
+    isPaused,
+    isSupported: ttsSupported,
+    speak,
+    pause: pauseTTS,
+    resume: resumeTTS,
+    stop: stopTTS,
+  } = useTextToSpeech({
+    rate: ttsSpeed,
+    voiceURI: ttsVoice,
+    lang: speechLang,
+    onEnd: () => setSpeakingMsgIndex(-1),
+  });
 
   useEffect(() => {
     if (!currentCurhat) navigate("/curhat");
@@ -98,6 +168,24 @@ export function ResponsePage() {
     const lastAI = [...currentCurhat.messages].map((m, i) => ({ m, i })).filter(({ m }) => m.role === "model").pop();
     if (lastAI) setAnimateIndex(lastAI.i);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto TTS — speak the latest AI message when it arrives
+  const prevMsgCountRef = useRef(0);
+  useEffect(() => {
+    if (!currentCurhat || !autoTTS || !ttsSupported) return;
+    const msgCount = currentCurhat.messages.length;
+    if (msgCount > prevMsgCountRef.current) {
+      const lastMsg = currentCurhat.messages[msgCount - 1];
+      if (lastMsg.role === "model") {
+        // Small delay for typewriter to start
+        setTimeout(() => {
+          setSpeakingMsgIndex(msgCount - 1);
+          speak(lastMsg.content);
+        }, 600);
+      }
+    }
+    prevMsgCountRef.current = msgCount;
+  }, [currentCurhat?.messages.length, autoTTS, ttsSupported, speak, currentCurhat]);
 
   const scrollToBottom = useCallback((smooth = true) => {
     messagesEndRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto" });
@@ -129,6 +217,12 @@ export function ResponsePage() {
 
   // Latest user message text (for crisis detection in reply box)
   const latestUserText = replyMessage;
+
+  const handleSpeak = (text: string, index: number) => {
+    stopTTS();
+    setSpeakingMsgIndex(index);
+    speak(text);
+  };
 
   const handleReply = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -257,7 +351,7 @@ export function ResponsePage() {
             </Button>
           </div>
 
-          {/* New Share Actions Row */}
+          {/* Share Actions Row */}
           <div className="w-full flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-slate-700/50 mt-1">
              <Button onClick={copyToClipboard} variant="ghost" size="sm"
                 className="text-gray-500 hover:text-teal-600 h-8 rounded-lg text-[10px] font-bold uppercase tracking-wider">
@@ -275,6 +369,46 @@ export function ResponsePage() {
           </div>
         </motion.div>
 
+        {/* TTS Playback Bar */}
+        <AnimatePresence>
+          {isSpeaking && (
+            <motion.div
+              initial={{ opacity: 0, y: -10, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: "auto" }}
+              exit={{ opacity: 0, y: -10, height: 0 }}
+              className="bg-gradient-to-r from-teal-500/10 to-purple-500/10 backdrop-blur-xl rounded-2xl p-3 border border-teal-200/30 dark:border-teal-700/30 flex items-center gap-3"
+            >
+              <div className="flex items-center gap-1.5">
+                {[0, 1, 2, 3, 4].map(i => (
+                  <motion.div
+                    key={i}
+                    className="w-1 rounded-full bg-teal-400"
+                    animate={{ height: [4, 12 + Math.random() * 8, 4] }}
+                    transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.1 }}
+                  />
+                ))}
+              </div>
+              <span className="text-xs font-semibold text-teal-600 dark:text-teal-400 flex-1">
+                🔊 AI sedang berbicara...
+              </span>
+              <div className="flex items-center gap-1">
+                {isPaused ? (
+                  <button onClick={resumeTTS} className="p-1.5 rounded-lg hover:bg-teal-500/20 text-teal-500 transition-colors">
+                    <Play className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button onClick={pauseTTS} className="p-1.5 rounded-lg hover:bg-amber-500/20 text-amber-500 transition-colors">
+                    <Pause className="w-4 h-4" />
+                  </button>
+                )}
+                <button onClick={() => { stopTTS(); setSpeakingMsgIndex(-1); }} className="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 transition-colors">
+                  <Square className="w-4 h-4 fill-current" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Chat area */}
         <div className="relative flex-1">
           <Card
@@ -289,6 +423,12 @@ export function ResponsePage() {
                   msg={msg}
                   isLatestAI={msg.role === "model" && index === animateIndex}
                   animate={index === animateIndex}
+                  onSpeak={ttsSupported ? (text) => handleSpeak(text, index) : undefined}
+                  isSpeakingThis={isSpeaking && speakingMsgIndex === index}
+                  isPausedThis={isPaused && speakingMsgIndex === index}
+                  onPauseTTS={pauseTTS}
+                  onResumeTTS={resumeTTS}
+                  onStopTTS={() => { stopTTS(); setSpeakingMsgIndex(-1); }}
                 />
               ))}
 
@@ -355,6 +495,7 @@ export function ResponsePage() {
           </form>
           <p className="text-center text-[11px] text-gray-400 dark:text-gray-500 mt-2 font-medium">
             {messageCount} pesan dalam sesi ini • Shift+Enter untuk baris baru
+            {ttsSupported && " • 🔊 Klik ikon speaker untuk mendengar"}
           </p>
         </motion.div>
       </main>

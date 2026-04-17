@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { useApp } from "../context/AppContext";
-import { History, TrendingUp, BarChart2, LineChart as LineChartIcon, PieChart as PieChartIcon, Brain, Sparkles, Lightbulb } from "lucide-react";
+import { History, TrendingUp, BarChart2, LineChart as LineChartIcon, Brain, Sparkles, Lightbulb } from "lucide-react";
 import { generateAIInsights, AIInsight } from "../utils/insights";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,

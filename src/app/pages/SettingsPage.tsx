@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { 
   Settings, 
   User, 
@@ -11,7 +11,10 @@ import {
   ShieldCheck, 
   ChevronRight,
   Check,
-  AlertTriangle
+  AlertTriangle,
+  Volume2,
+  Mic,
+  Camera
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
@@ -27,13 +30,29 @@ export function SettingsPage() {
   const { 
     apiKey, setApiKey, 
     aiName, setAiName, 
-    notificationsEnabled, setNotificationsEnabled,
     exportData, importData,
-    clearAllCurhats
+    clearAllCurhats,
+    autoTTS, setAutoTTS,
+    ttsSpeed, setTtsSpeed,
+    ttsVoice, setTtsVoice,
+    speechLang, setSpeechLang,
+    faceDetectionEnabled, setFaceDetectionEnabled,
   } = useApp();
 
   const [tempApiKey, setTempApiKey] = useState(apiKey);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  // Load TTS voices
+  useEffect(() => {
+    if (!('speechSynthesis' in window)) return;
+    const loadVoices = () => {
+      setAvailableVoices(window.speechSynthesis.getVoices());
+    };
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    return () => { window.speechSynthesis.onvoiceschanged = null; };
+  }, []);
 
   const handleSaveApi = () => {
     setApiKey(tempApiKey);
@@ -86,6 +105,7 @@ export function SettingsPage() {
               {[
                 { label: "Personalization", icon: User, active: true },
                 { label: "AI & API", icon: Key },
+                { label: "Suara & TTS", icon: Volume2 },
                 { label: "Data & Privacy", icon: ShieldCheck },
                 { label: "Notifications", icon: Bell },
               ].map((item, i) => (
@@ -158,6 +178,137 @@ export function SettingsPage() {
                       Dapatkan key secara gratis di <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-teal-500 underline">Google AI Studio</a>.
                     </p>
                   </div>
+                </div>
+              </Card>
+
+              {/* Voice & TTS Settings */}
+              <Card className="p-6 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-white/5 rounded-3xl">
+                <div className="flex items-center gap-3 mb-6">
+                  <Volume2 className="w-5 h-5 text-cyan-500" />
+                  <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">Pengaturan Suara</h3>
+                </div>
+                
+                <div className="space-y-6">
+                  {/* Auto TTS Toggle */}
+                  <div className="flex items-center justify-between p-4 bg-cyan-500/5 rounded-2xl border border-cyan-500/10">
+                    <div>
+                      <h4 className="font-bold text-sm text-gray-800 dark:text-gray-200">Auto Text-to-Speech</h4>
+                      <p className="text-xs text-gray-500">Otomatis membacakan balasan AI.</p>
+                    </div>
+                    <button 
+                      onClick={() => setAutoTTS(!autoTTS)}
+                      className={`relative w-12 h-7 rounded-full transition-colors ${
+                        autoTTS ? "bg-teal-500" : "bg-gray-300 dark:bg-slate-600"
+                      }`}
+                    >
+                      <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform ${
+                        autoTTS ? "translate-x-5" : "translate-x-0.5"
+                      }`} />
+                    </button>
+                  </div>
+
+                  {/* TTS Speed */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-bold uppercase tracking-widest text-gray-400">Kecepatan Suara</Label>
+                      <span className="text-xs font-bold text-teal-500">{ttsSpeed.toFixed(1)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="2.0"
+                      step="0.1"
+                      value={ttsSpeed}
+                      onChange={(e) => setTtsSpeed(parseFloat(e.target.value))}
+                      className="w-full h-2 rounded-full bg-gray-200 dark:bg-slate-700 accent-teal-500 cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-gray-400">
+                      <span>Lambat (0.5x)</span>
+                      <span>Normal (1x)</span>
+                      <span>Cepat (2x)</span>
+                    </div>
+                  </div>
+
+                  {/* Voice Selection */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-widest text-gray-400">Pilihan Suara TTS</Label>
+                    <select
+                      value={ttsVoice}
+                      onChange={(e) => setTtsVoice(e.target.value)}
+                      className="w-full h-12 px-4 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 text-sm focus:ring-2 focus:ring-teal-500/50 focus:outline-none"
+                    >
+                      <option value="">🔊 Auto (default browser)</option>
+                      {availableVoices.map((voice) => (
+                        <option key={voice.voiceURI} value={voice.voiceURI}>
+                          {voice.name} ({voice.lang})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-gray-500">
+                      {availableVoices.length} suara tersedia di browser Anda.
+                    </p>
+                  </div>
+
+                  {/* Speech Recognition Language */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Mic className="w-4 h-4 text-purple-500" />
+                      <Label className="text-xs font-bold uppercase tracking-widest text-gray-400">Bahasa Speech Recognition</Label>
+                    </div>
+                    <select
+                      value={speechLang}
+                      onChange={(e) => setSpeechLang(e.target.value)}
+                      className="w-full h-12 px-4 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 text-sm focus:ring-2 focus:ring-purple-500/50 focus:outline-none"
+                    >
+                      <option value="id-ID">🇮🇩 Bahasa Indonesia</option>
+                      <option value="en-US">🇺🇸 English (US)</option>
+                      <option value="en-GB">🇬🇧 English (UK)</option>
+                      <option value="ms-MY">🇲🇾 Bahasa Melayu</option>
+                      <option value="jv-ID">Javanese</option>
+                      <option value="su-ID">Sundanese</option>
+                    </select>
+                  </div>
+
+                  {/* Face Emotion Recognition Toggle */}
+                  <div className="flex items-start justify-between p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 mt-4">
+                    <div className="pr-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Camera className="w-4 h-4 text-emerald-500" />
+                        <h4 className="font-bold text-sm text-gray-800 dark:text-gray-200">Deteksi Emosi Wajah</h4>
+                      </div>
+                      <p className="text-xs text-gray-500">Membaca mikro-ekspresi wajah via kamera agar AI merespons lebih empatik. <br/><span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">100% Privat: Diproses lokal di browser.</span></p>
+                    </div>
+                    <button 
+                      onClick={() => setFaceDetectionEnabled(!faceDetectionEnabled)}
+                      className={`relative w-12 h-7 rounded-full transition-colors mt-1 shrink-0 ${
+                        faceDetectionEnabled ? "bg-emerald-500" : "bg-gray-300 dark:bg-slate-600"
+                      }`}
+                    >
+                      <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform ${
+                        faceDetectionEnabled ? "translate-x-5" : "translate-x-0.5"
+                      }`} />
+                    </button>
+                  </div>
+
+                  {/* Test TTS */}
+                  <Button
+                    onClick={() => {
+                      if (!('speechSynthesis' in window)) return;
+                      window.speechSynthesis.cancel();
+                      const utt = new SpeechSynthesisUtterance("Halo, ini suara Tenang AI. Saya siap mendengarkan ceritamu.");
+                      utt.rate = ttsSpeed;
+                      utt.lang = speechLang;
+                      if (ttsVoice) {
+                        const v = availableVoices.find(v => v.voiceURI === ttsVoice);
+                        if (v) utt.voice = v;
+                      }
+                      window.speechSynthesis.speak(utt);
+                    }}
+                    className="w-full bg-gradient-to-r from-cyan-500/10 to-teal-500/10 hover:from-cyan-500/20 hover:to-teal-500/20 border border-cyan-200/50 dark:border-cyan-800/50 text-cyan-700 dark:text-cyan-300 rounded-2xl py-5 font-semibold flex gap-2 transition-all"
+                    variant="outline"
+                  >
+                    <Volume2 className="w-5 h-5" /> Test Suara
+                  </Button>
                 </div>
               </Card>
 

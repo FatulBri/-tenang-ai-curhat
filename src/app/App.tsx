@@ -8,6 +8,7 @@ import { MoodStatsPage } from "./pages/MoodStatsPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { HotlinePage } from "./pages/HotlinePage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { VoiceCurhatPage } from "./pages/VoiceCurhatPage";
 import { PanicButton } from "./components/PanicButton";
 import { AmbientPlayer } from "./components/AmbientPlayer";
 import { OnboardingModal } from "./components/OnboardingModal";
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/hotline" element={<HotlinePage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/voice-curhat" element={<VoiceCurhatPage />} />
           </Routes>
 
           {/* Floating Panic Button - visible on all pages except hotline */}

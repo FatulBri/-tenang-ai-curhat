@@ -41,6 +41,17 @@ interface AppContextType {
   setAiName: (name: string) => void;
   notificationsEnabled: boolean;
   setNotificationsEnabled: (v: boolean) => void;
+  // Voice settings
+  autoTTS: boolean;
+  setAutoTTS: (v: boolean) => void;
+  ttsSpeed: number;
+  setTtsSpeed: (v: number) => void;
+  ttsVoice: string;
+  setTtsVoice: (v: string) => void;
+  speechLang: string;
+  setSpeechLang: (v: string) => void;
+  faceDetectionEnabled: boolean;
+  setFaceDetectionEnabled: (v: boolean) => void;
   streak: number;
   badges: Badge[];
   growthScore: number;
@@ -91,6 +102,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [apiKey, setApiKey] = useState(() => localStorage.getItem("gemini_api_key") || import.meta.env.VITE_GEMINI_API_KEY || "");
   const [aiName, setAiName] = useState(() => localStorage.getItem("tenang_ai_name") || "Tenang AI");
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => localStorage.getItem("tenang_notif") === "true");
+
+  // Voice settings
+  const [autoTTS, setAutoTTS] = useState(() => localStorage.getItem("tenang_auto_tts") === "true");
+  const [ttsSpeed, setTtsSpeed] = useState(() => parseFloat(localStorage.getItem("tenang_tts_speed") || "1"));
+  const [ttsVoice, setTtsVoice] = useState(() => localStorage.getItem("tenang_tts_voice") || "");
+  const [speechLang, setSpeechLang] = useState(() => localStorage.getItem("tenang_speech_lang") || "id-ID");
+  
+  // Face Detection settings
+  const [faceDetectionEnabled, setFaceDetectionEnabled] = useState(() => localStorage.getItem("tenang_face_detection") === "true");
 
   // Calculate streak (consecutive days with mood or curhat entries)
   const streak = (() => {
@@ -158,6 +178,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem("tenang_notif", notificationsEnabled ? "true" : "false");
   }, [notificationsEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem("tenang_auto_tts", autoTTS ? "true" : "false");
+  }, [autoTTS]);
+
+  useEffect(() => {
+    localStorage.setItem("tenang_tts_speed", ttsSpeed.toString());
+  }, [ttsSpeed]);
+
+  useEffect(() => {
+    localStorage.setItem("tenang_tts_voice", ttsVoice);
+  }, [ttsVoice]);
+
+  useEffect(() => {
+    localStorage.setItem("tenang_speech_lang", speechLang);
+  }, [speechLang]);
+
+  useEffect(() => {
+    localStorage.setItem("tenang_face_detection", faceDetectionEnabled ? "true" : "false");
+  }, [faceDetectionEnabled]);
 
   useEffect(() => {
     if (darkMode) {
@@ -251,6 +291,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setAiName,
         notificationsEnabled,
         setNotificationsEnabled,
+        autoTTS,
+        setAutoTTS,
+        ttsSpeed,
+        setTtsSpeed,
+        ttsVoice,
+        setTtsVoice,
+        speechLang,
+        setSpeechLang,
+        faceDetectionEnabled,
+        setFaceDetectionEnabled,
         streak,
         badges,
         growthScore,

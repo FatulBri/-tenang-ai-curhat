@@ -12,6 +12,7 @@ import {
   ChevronDown,
   BarChart3,
   Settings as SettingsIcon,
+  Mic,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { useNotification } from "../utils/useNotification";
@@ -38,6 +39,7 @@ export function Navigation() {
       icon: MessageCircle,
       items: [
         { label: "Mulai Curhat", path: "/curhat", icon: MessageCircle },
+        { label: "Mode Suara 🎙️", path: "/voice-curhat", icon: Mic },
         { label: "Riwayat Curhat", path: "/history", icon: History, badge: curhats.length },
       ]
     },

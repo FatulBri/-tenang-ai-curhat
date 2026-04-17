@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Music, Volume2, VolumeX, Pause, Play, ExternalLink } from "lucide-react";
+import { Music, Volume2, VolumeX, Pause, Play, ExternalLink, Power } from "lucide-react";
 import { Button } from "./ui/button";
 import { Slider } from "./ui/slider";
 import {
@@ -12,15 +12,26 @@ import { cn } from "./ui/utils";
 // Requested Video: https://www.youtube.com/watch?v=hoZEi4zina4
 // Background Mode: Autoplay, Muted, Loop, No Controls
 const VIDEO_ID = "hoZEi4zina4";
+const LS_KEY_AMBIENT = "tenang_ambient_enabled";
 
 export function AmbientPlayer() {
+    // Persistent on/off state — defaults to OFF so it doesn't annoy users
+    const [isEnabled, setIsEnabled] = useState(() => localStorage.getItem(LS_KEY_AMBIENT) === "true");
     const [isPlaying, setIsPlaying] = useState(false);
     const [volume, setVolume] = useState([0.5]); // Default volume 50% (but starts muted)
     const playerRef = useRef<any>(null);
     const [isOpen, setIsOpen] = useState(false);
     const [isPlayerReady, setIsPlayerReady] = useState(false);
 
+    // Persist enabled state
     useEffect(() => {
+        localStorage.setItem(LS_KEY_AMBIENT, isEnabled ? "true" : "false");
+    }, [isEnabled]);
+
+    useEffect(() => {
+        // Only load YouTube player if enabled
+        if (!isEnabled) return;
+
         // Load YouTube IFrame API
         if (!(window as any).YT) {
             const tag = document.createElement('script');
@@ -30,6 +41,10 @@ export function AmbientPlayer() {
         }
 
         const createPlayer = () => {
+            // Don't create if element doesn't exist
+            const el = document.getElementById('youtube-background');
+            if (!el) return;
+
             const playerConfig = {
                 height: '100%',
                 width: '100%',
@@ -62,13 +77,16 @@ export function AmbientPlayer() {
             (window as any).onYouTubeIframeAPIReady = createPlayer;
         }
 
-        // 5. CLEANUP: Destroy player on unmount
+        // CLEANUP: Destroy player on unmount or disable
         return () => {
             if (playerRef.current?.destroy) {
                 playerRef.current.destroy();
+                playerRef.current = null;
             }
+            setIsPlayerReady(false);
+            setIsPlaying(false);
         }
-    }, []);
+    }, [isEnabled]);
 
     // 2. SOLUSI AMAN: Jangan unmute di onReady
     const onPlayerReady = (event: any) => {
@@ -125,15 +143,31 @@ export function AmbientPlayer() {
         }
     };
 
+    // Toggle enabled/disabled
+    const toggleEnabled = () => {
+        if (isEnabled) {
+            // Turning off — stop and destroy player
+            if (playerRef.current?.pauseVideo) {
+                playerRef.current.pauseVideo();
+            }
+            setIsEnabled(false);
+        } else {
+            // Turning on — will trigger useEffect to create player
+            setIsEnabled(true);
+        }
+    };
+
     return (
         <>
-            {/* Background Video Layer */}
-            <div className="fixed inset-0 w-full h-full -z-50 overflow-hidden pointer-events-none">
-                <div className="absolute inset-0 bg-black/60 z-10" /> {/* Dark Overlay for Readability */}
-                <div className="w-[300%] h-[300%] -ml-[100%] -mt-[100%]"> {/* Scale to cover */}
-                    <div id="youtube-background" className="w-full h-full" />
+            {/* Background Video Layer — only render when enabled */}
+            {isEnabled && (
+                <div className="fixed inset-0 w-full h-full -z-50 overflow-hidden pointer-events-none">
+                    <div className="absolute inset-0 bg-black/60 z-10" /> {/* Dark Overlay for Readability */}
+                    <div className="w-[300%] h-[300%] -ml-[100%] -mt-[100%]"> {/* Scale to cover */}
+                        <div id="youtube-background" className="w-full h-full" />
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Floating Control Button */}
             <div className="fixed bottom-6 left-6 z-50">
@@ -142,13 +176,13 @@ export function AmbientPlayer() {
                         <Button
                             className={cn(
                                 "w-12 h-12 rounded-full shadow-2xl transition-all duration-300 hover:scale-110",
-                                isPlaying
+                                isEnabled && isPlaying
                                     ? "bg-red-600/90 hover:bg-red-700 backdrop-blur-sm text-white border-2 border-red-400/50"
                                     : "bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/20"
                             )}
                             size="icon"
                         >
-                            {isPlaying ? (
+                            {isEnabled && isPlaying ? (
                                 <Music className="w-5 h-5 animate-pulse" />
                             ) : (
                                 <Music className="w-5 h-5 opacity-50" />
@@ -162,42 +196,72 @@ export function AmbientPlayer() {
                                     <Music className="w-4 h-4 text-red-400" />
                                     Background Ambience
                                 </h4>
-                                {isPlaying && <span className="text-[10px] text-green-400 font-mono animate-pulse">LIVE</span>}
+                                {isEnabled && isPlaying && <span className="text-[10px] text-green-400 font-mono animate-pulse">LIVE</span>}
                             </div>
 
-                            <div className="flex justify-center">
-                                <Button
-                                    onClick={togglePlay}
-                                    size="lg"
-                                    className="rounded-full w-12 h-12 bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/20"
-                                    disabled={!isPlayerReady}
+                            {/* ON/OFF Master Toggle */}
+                            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
+                                <div className="flex items-center gap-2">
+                                    <Power className={`w-4 h-4 ${isEnabled ? "text-green-400" : "text-gray-500"}`} />
+                                    <div>
+                                        <p className="text-sm font-semibold text-white">
+                                            {isEnabled ? "Aktif" : "Nonaktif"}
+                                        </p>
+                                        <p className="text-[10px] text-gray-400">
+                                            Yura Yunita — Tenang
+                                        </p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={toggleEnabled}
+                                    className={`relative w-12 h-7 rounded-full transition-colors ${
+                                        isEnabled ? "bg-green-500" : "bg-gray-600"
+                                    }`}
                                 >
-                                    {isPlaying ? <Pause className="fill-current w-5 h-5" /> : <Play className="fill-current w-5 h-5 pl-1" />}
-                                </Button>
+                                    <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform ${
+                                        isEnabled ? "translate-x-5" : "translate-x-0.5"
+                                    }`} />
+                                </button>
                             </div>
 
-                            {/* Volume */}
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between text-xs text-gray-400">
-                                    <span>Volume</span>
-                                    <span>{Math.round(volume[0] * 100)}%</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <button onClick={() => setVolume(volume[0] === 0 ? [0.5] : [0])}>
-                                        {volume[0] === 0 ? <VolumeX className="w-4 h-4 text-gray-500" /> : <Volume2 className="w-4 h-4 text-red-400" />}
-                                    </button>
-                                    <Slider
-                                        value={volume}
-                                        max={1}
-                                        step={0.01}
-                                        onValueChange={setVolume}
-                                        className="w-full cursor-pointer"
-                                    />
-                                </div>
-                                <p className="text-[10px] text-gray-500 text-center mt-1">
-                                    *Video mulai <strong>Mute</strong> (aturan browser). Naikkan volume atau klik Play untuk dengar.
-                                </p>
-                            </div>
+                            {/* Play/Pause + Volume — only show when enabled */}
+                            {isEnabled && (
+                                <>
+                                    <div className="flex justify-center">
+                                        <Button
+                                            onClick={togglePlay}
+                                            size="lg"
+                                            className="rounded-full w-12 h-12 bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/20"
+                                            disabled={!isPlayerReady}
+                                        >
+                                            {isPlaying ? <Pause className="fill-current w-5 h-5" /> : <Play className="fill-current w-5 h-5 pl-1" />}
+                                        </Button>
+                                    </div>
+
+                                    {/* Volume */}
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between text-xs text-gray-400">
+                                            <span>Volume</span>
+                                            <span>{Math.round(volume[0] * 100)}%</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <button onClick={() => setVolume(volume[0] === 0 ? [0.5] : [0])}>
+                                                {volume[0] === 0 ? <VolumeX className="w-4 h-4 text-gray-500" /> : <Volume2 className="w-4 h-4 text-red-400" />}
+                                            </button>
+                                            <Slider
+                                                value={volume}
+                                                max={1}
+                                                step={0.01}
+                                                onValueChange={setVolume}
+                                                className="w-full cursor-pointer"
+                                            />
+                                        </div>
+                                        <p className="text-[10px] text-gray-500 text-center mt-1">
+                                            *Video mulai <strong>Mute</strong> (aturan browser). Naikkan volume atau klik Play untuk dengar.
+                                        </p>
+                                    </div>
+                                </>
+                            )}
 
                             <div className="pt-2 text-center">
                                 <a

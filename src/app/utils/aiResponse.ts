@@ -5,8 +5,19 @@ export interface AIResult {
   category: string;
 }
 
-export function getSystemPrompt(persona: string): string {
-  const baseRules = `PENTING: Jangan memberikan diagnosis medis. Jika serius, arahkan ke bantuan profesional. Jawablah "aiResponse" dengan singkat (maks 3-4 kalimat).
+export function getSystemPrompt(persona: string, faceEmotion?: string | null): string {
+  let emotionContext = "";
+  if (faceEmotion) {
+    const emotionId = faceEmotion === 'happy' ? 'Senang 😊' :
+                      faceEmotion === 'sad' ? 'Sedih 😢' :
+                      faceEmotion === 'angry' ? 'Marah 😡' :
+                      faceEmotion === 'fearful' ? 'Takut/Cemas 😰' :
+                      faceEmotion === 'disgusted' ? 'Jijik 🤢' :
+                      faceEmotion === 'surprised' ? 'Terkejut 😲' : 'Netral 😐';
+    emotionContext = `\n[KONTEKS VISUAL PENTING]: Ekspresi wajah pengguna saat ini terdeteksi: "${emotionId}". Gunakan sinyal wajah ini untuk memberikan respons yang lebih berempati dan sesuai dengan perasaannya saat ini secara natural.`;
+  }
+
+  const baseRules = `PENTING: Jangan memberikan diagnosis medis. Jika serius, arahkan ke bantuan profesional. Jawablah "aiResponse" dengan singkat (maks 3-4 kalimat).${emotionContext}
 Tugasmu adalah menganalisis pesan lalu merespons HANYA DALAM FORMAT JSON VALID. Struktur yang harus dipatuhi:
 {
   "aiResponse": "(balasanmu sesuai peran)",
@@ -41,12 +52,16 @@ const FALLBACK_RESPONSES = [
   "Terima kasih atas keberanianmu bercerita. Tetaplah kuat, dan jangan ragu mencari bantuan profesional jika perlu. 💜"
 ];
 
-export async function generateAIResponse(messages: { role: string, content: string }[], persona: string = "psikolog"): Promise<AIResult> {
+export async function generateAIResponse(
+  messages: { role: string, content: string }[], 
+  persona: string = "psikolog",
+  faceEmotion?: string | null
+): Promise<AIResult> {
   // Use absolute URL locally if needed, but relative works on Vercel and vercel dev
   const API_ENDPOINT = "/api/generate-response";
   
   const lastMessage = messages[messages.length - 1]?.content || "";
-  const systemPrompt = getSystemPrompt(persona);
+  const systemPrompt = getSystemPrompt(persona, faceEmotion);
 
   try {
     const localApiKey = localStorage.getItem("gemini_api_key") || "";

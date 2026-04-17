@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useApp } from "../context/AppContext";
-import { Flower, Wind, Sparkles } from "lucide-react";
+import { Flower, Sparkles } from "lucide-react";
 
 export function DigitalGarden() {
   const { growthScore, isBlooming, streak } = useApp();
@@ -13,7 +13,6 @@ export function DigitalGarden() {
 
   const stemHeight = [20, 60, 100, 140, 180][level];
   const leafCount = [0, 2, 4, 8, 12][level];
-  const scale = [0.8, 1, 1.2, 1.4, 1.6][level];
 
   // Plant colors based on health/streak
   const plantColor = streak > 3 ? "#14b8a6" : "#2dd4bf"; // More vivid green for streaks

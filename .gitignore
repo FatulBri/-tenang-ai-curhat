@@ -116,3 +116,5 @@ dist
 # Vite
 dist-ssr
 *.local
+.vercel
+.env*.local

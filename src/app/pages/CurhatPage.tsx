@@ -12,6 +12,9 @@ import {
 } from "../components/ui/select";
 import { useApp } from "../context/AppContext";
 import { generateAIResponse, mapAIMoodToKey } from "../utils/aiResponse";
+import { useSpeechRecognition } from "../utils/useVoice";
+import { FaceEmotionDetector } from "../components/FaceEmotionDetector";
+import { Emotion } from "../utils/useFaceEmotion";
 import { Navigation } from "../components/Navigation";
 import { Footer } from "../components/Footer";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,14 +22,31 @@ import { CrisisBanner } from "../components/CrisisBanner";
 
 export function CurhatPage() {
   const navigate = useNavigate();
-  const { addCurhat, setCurrentCurhat, addMood } = useApp();
+  const { addCurhat, setCurrentCurhat, addMood, speechLang, faceDetectionEnabled } = useApp();
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [persona, setPersona] = useState("psikolog");
-  const [isListening, setIsListening] = useState(false);
   const [zenMode, setZenMode] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const [currentEmotion, setCurrentEmotion] = useState<Emotion | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Speech Recognition via hook
+  const {
+    isListening,
+    interimTranscript,
+    audioLevels,
+    isSupported: speechSupported,
+    toggle: toggleListening,
+  } = useSpeechRecognition({
+    lang: speechLang,
+    continuous: true,
+    onResult: (transcript) => {
+      setMessage(prev => prev + (prev.length > 0 && !prev.endsWith(' ') ? ' ' : '') + transcript);
+    },
+    onError: (err) => {
+      alert(`Speech error: ${err}. Gunakan Chrome/Edge.`);
+    },
+  });
 
   // Auto-resize textarea
   const autoResize = useCallback(() => {
@@ -41,45 +61,6 @@ export function CurhatPage() {
     autoResize();
   }, [message, autoResize]);
 
-  const handleMicClick = () => {
-    if (isListening) {
-      if (recognitionRef.current) recognitionRef.current.stop();
-      setIsListening(false);
-    } else {
-      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        alert("Browser tidak mendukung fitur suara (Gunakan Chrome/Edge).");
-        return;
-      }
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'id-ID';
-      recognition.continuous = false;
-      recognition.interimResults = true;
-
-      recognition.onstart = () => setIsListening(true);
-      recognition.onend = () => setIsListening(false);
-      recognition.onerror = (event: any) => {
-        console.error("Speech error", event.error);
-        setIsListening(false);
-      };
-
-      recognition.onresult = (event: any) => {
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          }
-        }
-        if (finalTranscript) {
-          setMessage(prev => prev + (prev.length > 0 && !prev.endsWith(' ') ? ' ' : '') + finalTranscript);
-        }
-      };
-
-      recognitionRef.current = recognition;
-      recognition.start();
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || isSubmitting) return;
@@ -89,7 +70,7 @@ export function CurhatPage() {
     try {
       const now = new Date().toISOString();
       const initialUserMsg = { role: "user" as const, content: message, timestamp: now };
-      const aiResult = await generateAIResponse([initialUserMsg], persona);
+      const aiResult = await generateAIResponse([initialUserMsg], persona, currentEmotion);
 
       const newCurhat = {
         id: Date.now().toString(),
@@ -103,7 +84,6 @@ export function CurhatPage() {
         persona,
       };
 
-
       addCurhat(newCurhat);
       
       // Auto-add to Mood Tracker
@@ -115,7 +95,6 @@ export function CurhatPage() {
       });
 
       setCurrentCurhat(newCurhat);
-
       navigate("/response");
     } catch (error) {
       console.error("Error submitting curhat:", error);
@@ -131,6 +110,18 @@ export function CurhatPage() {
         : "bg-[#fafafc] dark:bg-[#030213]"
     }`}>
       {!zenMode && <Navigation />}
+
+      {/* Floating Face Detector (Compact) */}
+      {faceDetectionEnabled && !zenMode && (
+        <div className="absolute top-20 right-4 sm:right-6 z-20 w-24 sm:w-32 drop-shadow-lg opacity-80 hover:opacity-100 transition-opacity">
+          <FaceEmotionDetector 
+            enabled={faceDetectionEnabled} 
+            onEmotionChange={setCurrentEmotion} 
+            compact={true} 
+            className="aspect-[4/3] rounded-xl ring-1 ring-white/10 shadow-xl"
+          />
+        </div>
+      )}
 
       <main className="max-w-3xl mx-auto px-6 py-12 flex-1 relative z-10 w-full flex flex-col justify-center">
         <motion.div
@@ -209,11 +200,14 @@ export function CurhatPage() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     type="button"
-                    onClick={handleMicClick}
+                    onClick={toggleListening}
                     className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all ${isListening
                       ? "bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.5)] border-transparent"
-                      : "bg-white/80 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 border border-gray-200 dark:border-slate-700"
+                      : speechSupported
+                        ? "bg-white/80 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 border border-gray-200 dark:border-slate-700"
+                        : "bg-gray-200 dark:bg-slate-800 text-gray-400 cursor-not-allowed border border-gray-200 dark:border-slate-700"
                       }`}
+                    disabled={!speechSupported}
                   >
                     {isListening ? (
                       <><Square className="w-3.5 h-3.5 fill-current" /> Berhenti rekam</>
@@ -235,7 +229,7 @@ export function CurhatPage() {
                     className="relative w-full min-h-[180px] p-5 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-gray-800 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none resize-none transition-all z-10 leading-relaxed overflow-hidden"
                     disabled={isSubmitting}
                   />
-                  {/* Mic pulse effect layout */}
+                  {/* Mic active overlay with waveform */}
                   <AnimatePresence>
                     {isListening && (
                       <motion.div 
@@ -244,10 +238,27 @@ export function CurhatPage() {
                         exit={{ opacity: 0 }}
                         className="absolute inset-0 border-2 border-red-500 rounded-2xl z-20 pointer-events-none"
                       >
+                         {/* Audio waveform inside textarea */}
+                         <div className="absolute left-4 bottom-4 flex items-end gap-[2px] h-6">
+                           {audioLevels.slice(0, 16).map((level, i) => (
+                             <motion.div
+                               key={i}
+                               className="w-1 rounded-full bg-red-400"
+                               animate={{ height: Math.max(3, level * 24) }}
+                               transition={{ duration: 0.05 }}
+                             />
+                           ))}
+                         </div>
                          <div className="absolute right-4 bottom-4 flex items-center gap-2 text-red-500">
                            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
                            <span className="text-xs font-bold uppercase tracking-wider">Listening</span>
                          </div>
+                         {/* Interim transcript preview */}
+                         {interimTranscript && (
+                           <div className="absolute left-4 top-3 right-4 z-30">
+                             <p className="text-xs text-red-400/70 italic truncate">{interimTranscript}</p>
+                           </div>
+                         )}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -281,12 +292,37 @@ export function CurhatPage() {
           </Card>
         </motion.div>
 
+        {/* Voice Mode Link */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="mt-6 mx-auto self-center"
+        >
+          <button
+            onClick={() => navigate("/voice-curhat")}
+            className="inline-flex items-center gap-3 px-6 py-3.5 bg-gradient-to-r from-purple-500/10 to-teal-500/10 hover:from-purple-500/20 hover:to-teal-500/20 backdrop-blur-md rounded-2xl border border-purple-200/30 dark:border-purple-700/30 transition-all group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 to-purple-500 flex items-center justify-center shadow-[0_0_20px_rgba(20,184,166,0.2)] group-hover:shadow-[0_0_30px_rgba(20,184,166,0.4)] transition-shadow">
+              <Mic className="w-5 h-5 text-white" />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-bold text-gray-800 dark:text-gray-200 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                Mode Suara 🎙️
+              </p>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                Curhat langsung lewat suara — Hands-free
+              </p>
+            </div>
+          </button>
+        </motion.div>
+
         {/* Info Box */}
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="mt-8 mx-auto self-center"
+          className="mt-4 mx-auto self-center"
         >
           <div className="inline-flex items-center justify-center px-6 py-3 bg-teal-500/10 dark:bg-teal-500/20 backdrop-blur-md rounded-full border border-teal-200/50 dark:border-teal-700/50">
              <span className="text-xs font-medium text-teal-800 dark:text-teal-300 text-center flex gap-2 items-center">

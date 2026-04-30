@@ -19,7 +19,7 @@ export function useFaceEmotion({ videoRef, enabled, intervalMs = 500 }: UseFaceE
   const [emotionScores, setEmotionScores] = useState<Record<string, number> | null>(null);
   const [hasFace, setHasFace] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const detectIntervalRef = useRef<number | null>(null);
 
   // Load models on mount
@@ -36,7 +36,7 @@ export function useFaceEmotion({ videoRef, enabled, intervalMs = 500 }: UseFaceE
         setError("Gagal memuat model deteksi wajah. Periksa koneksi internet.");
       }
     };
-    
+
     if (!isModelsLoaded) {
       loadModels();
     }
@@ -44,9 +44,9 @@ export function useFaceEmotion({ videoRef, enabled, intervalMs = 500 }: UseFaceE
 
   const startDetection = useCallback(async () => {
     if (!enabled || !isModelsLoaded || !videoRef.current || isDetecting) return;
-    
+
     setIsDetecting(true);
-    
+
     detectIntervalRef.current = window.setInterval(async () => {
       if (!videoRef.current || videoRef.current.paused || videoRef.current.ended) {
         return;
@@ -54,7 +54,7 @@ export function useFaceEmotion({ videoRef, enabled, intervalMs = 500 }: UseFaceE
 
       try {
         const detection = await faceapi.detectSingleFace(
-          videoRef.current, 
+          videoRef.current,
           new faceapi.TinyFaceDetectorOptions()
         ).withFaceExpressions();
 
@@ -62,13 +62,13 @@ export function useFaceEmotion({ videoRef, enabled, intervalMs = 500 }: UseFaceE
           setHasFace(true);
           const expressions = detection.expressions;
           setEmotionScores(expressions as unknown as Record<string, number>);
-          
+
           // Find the emotion with the highest probability
-          const highestEmotion = Object.keys(expressions).reduce((a, b) => 
+          const highestEmotion = Object.keys(expressions).reduce((a, b) =>
             // @ts-ignore
             expressions[a] > expressions[b] ? a : b
           ) as Emotion;
-          
+
           setCurrentEmotion(highestEmotion);
         } else {
           setHasFace(false);
@@ -79,7 +79,7 @@ export function useFaceEmotion({ videoRef, enabled, intervalMs = 500 }: UseFaceE
         console.error("Face detection error:", err);
       }
     }, intervalMs);
-    
+
   }, [enabled, isModelsLoaded, videoRef, intervalMs, isDetecting]);
 
   const stopDetection = useCallback(() => {

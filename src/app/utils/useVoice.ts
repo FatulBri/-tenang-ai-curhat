@@ -13,9 +13,6 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
   const [isListening, setIsListening] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState("");
   const recognitionRef = useRef<any>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
   const [audioLevels, setAudioLevels] = useState<number[]>(new Array(32).fill(0));
   const animFrameRef = useRef<number>(0);
 

@@ -60,7 +60,10 @@ export function VoiceCurhatPage() {
     lang: speechLang,
     continuous: true,
     onResult: handleTranscriptResult,
-    onError: (err) => toast.error(`Speech Error: ${err}`),
+    onError: (err) => {
+      toast.error(`Speech Error: ${err}`);
+      setVoiceState("idle");
+    },
   });
 
   const {

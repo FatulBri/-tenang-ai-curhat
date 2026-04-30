@@ -62,12 +62,28 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
     setAudioLevels(new Array(32).fill(0));
   }, []);
 
-  const start = useCallback(() => {
+  const start = useCallback(async () => {
     if (!isSupported) {
       onError?.("Browser tidak mendukung fitur suara (Gunakan Chrome/Edge).");
       return;
     }
 
+    // LANGKAH 1: Minta izin mikrofon secara eksplisit.
+    // Di desktop, SpeechRecognition kadang gagal memicu popup izin secara otomatis.
+    // getUserMedia sangat handal untuk memancing popup izin.
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // LANGKAH 2: Lepaskan mikrofon seketika!
+      // Ini adalah kunci stabilitas di mobile (Android/iOS).
+      // Jika stream ditahan, SpeechRecognition akan bentrok dan gagal mendeteksi suara.
+      stream.getTracks().forEach(track => track.stop());
+    } catch (err: any) {
+      console.error("Microphone permission error:", err);
+      onError?.("Akses mikrofon ditolak. Mohon izinkan mikrofon di pengaturan browser.");
+      return;
+    }
+
+    // LANGKAH 3: Jalankan SpeechRecognition setelah izin dipastikan aman
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.lang = lang;

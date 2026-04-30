@@ -23,15 +23,30 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
     ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
   const startAudioVisualizer = useCallback(() => {
+    const startTime = Date.now();
     const updateLevels = () => {
-      // Fake audio levels using Math.random for visual effect
-      // This completely avoids any getUserMedia / microphone hardware conflicts
-      // with SpeechRecognition on all devices (especially mobile).
-      const levels = Array.from({ length: 32 }, () => Math.random() * 0.6 + 0.1);
+      const time = (Date.now() - startTime) / 1000;
+      
+      // Mensimulasikan ritme bicara (seperti jeda antar suku kata)
+      const speakingEnvelope = Math.max(0.2, Math.sin(time * 3) * 0.7 + 0.4); 
+      
+      const levels = Array.from({ length: 32 }, (_, i) => {
+        // Gelombang dasar yang bergerak mulus
+        const base = Math.sin(time * 8 + i * 0.5) * 0.3 + 0.4;
+        // Detail frekuensi yang lebih cepat
+        const detail = Math.sin(time * 20 - i * 0.8) * 0.2;
+        // Sedikit noise agar natural
+        const randomNoise = Math.random() * 0.15;
+        
+        const val = (base + detail + randomNoise) * speakingEnvelope;
+        return Math.max(0.05, Math.min(1, val));
+      });
+      
       setAudioLevels(levels);
       
-      // Update at a slower rate so it looks like a real voice wave
-      animFrameRef.current = window.setTimeout(updateLevels, 100) as unknown as number;
+      // Update setiap 50ms agar selaras sempurna dengan transition duration 0.05s di Framer Motion
+      // Ini akan menghilangkan efek patah-patah / delay
+      animFrameRef.current = window.setTimeout(updateLevels, 50) as unknown as number;
     };
     
     // Clear any existing

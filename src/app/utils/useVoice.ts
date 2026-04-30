@@ -19,7 +19,7 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
   const [audioLevels, setAudioLevels] = useState<number[]>(new Array(32).fill(0));
   const animFrameRef = useRef<number>(0);
 
-  const isSupported = typeof window !== "undefined" && 
+  const isSupported = typeof window !== "undefined" &&
     ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
   const startAudioVisualizer = useCallback(async () => {
@@ -116,7 +116,17 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
 
     recognitionRef.current = recognition;
     recognition.start();
-    startAudioVisualizer();
+    
+    // Deteksi mobile device untuk mencegah konflik akses mikrofon ganda
+    // Sistem operasi mobile sering memblokir SpeechRecognition jika getUserMedia berjalan bersamaan
+    const isMobile = typeof window !== "undefined" && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (!isMobile) {
+      startAudioVisualizer();
+    } else {
+      // Fallback untuk perangkat mobile: bisa berikan simulasi level audio 
+      // atau biarkan default 0 agar tidak mengganggu SpeechRecognition
+      console.log("Mobile device detected: Audio visualizer disabled to prevent microphone conflict.");
+    }
   }, [isSupported, lang, continuous, onResult, onError, startAudioVisualizer]);
 
   const stop = useCallback(() => {

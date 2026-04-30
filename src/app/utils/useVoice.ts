@@ -22,48 +22,28 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
   const isSupported = typeof window !== "undefined" &&
     ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
-  const startAudioVisualizer = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStreamRef.current = stream;
-
-      const audioContext = new AudioContext();
-      audioContextRef.current = audioContext;
-
-      const source = audioContext.createMediaStreamSource(stream);
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 64;
-      analyser.smoothingTimeConstant = 0.8;
-      source.connect(analyser);
-      analyserRef.current = analyser;
-
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-      const updateLevels = () => {
-        analyser.getByteFrequencyData(dataArray);
-        const levels = Array.from(dataArray).map(v => v / 255);
-        setAudioLevels(levels);
-        animFrameRef.current = requestAnimationFrame(updateLevels);
-      };
-      updateLevels();
-    } catch (err) {
-      console.error("Audio visualizer error:", err);
-    }
+  const startAudioVisualizer = useCallback(() => {
+    const updateLevels = () => {
+      // Fake audio levels using Math.random for visual effect
+      // This completely avoids any getUserMedia / microphone hardware conflicts
+      // with SpeechRecognition on all devices (especially mobile).
+      const levels = Array.from({ length: 32 }, () => Math.random() * 0.6 + 0.1);
+      setAudioLevels(levels);
+      
+      // Update at a slower rate so it looks like a real voice wave
+      animFrameRef.current = window.setTimeout(updateLevels, 100) as unknown as number;
+    };
+    
+    // Clear any existing
+    if (animFrameRef.current) clearTimeout(animFrameRef.current);
+    updateLevels();
   }, []);
 
   const stopAudioVisualizer = useCallback(() => {
     if (animFrameRef.current) {
-      cancelAnimationFrame(animFrameRef.current);
+      clearTimeout(animFrameRef.current);
+      animFrameRef.current = 0;
     }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(t => t.stop());
-      mediaStreamRef.current = null;
-    }
-    analyserRef.current = null;
     setAudioLevels(new Array(32).fill(0));
   }, []);
 
@@ -117,16 +97,10 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
     recognitionRef.current = recognition;
     recognition.start();
     
-    // Deteksi mobile device untuk mencegah konflik akses mikrofon ganda
-    // Sistem operasi mobile sering memblokir SpeechRecognition jika getUserMedia berjalan bersamaan
-    const isMobile = typeof window !== "undefined" && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (!isMobile) {
-      startAudioVisualizer();
-    } else {
-      // Fallback untuk perangkat mobile: bisa berikan simulasi level audio 
-      // atau biarkan default 0 agar tidak mengganggu SpeechRecognition
-      console.log("Mobile device detected: Audio visualizer disabled to prevent microphone conflict.");
-    }
+    // Karena kita sekarang menggunakan fake audio visualizer, 
+    // kita bisa jalankan ini dengan aman di semua perangkat (termasuk mobile)
+    // tanpa takut konflik akses mikrofon
+    startAudioVisualizer();
   }, [isSupported, lang, continuous, onResult, onError, startAudioVisualizer]);
 
   const stop = useCallback(() => {

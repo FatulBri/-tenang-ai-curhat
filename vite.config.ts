@@ -15,6 +15,9 @@ export default defineConfig({
       devOptions: {
         enabled: true
       },
+      workbox: {
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024 // 4 MiB
+      },
       manifest: {
         name: 'TENANG AI Anonymous Curhat',
         short_name: 'Tenang AI',

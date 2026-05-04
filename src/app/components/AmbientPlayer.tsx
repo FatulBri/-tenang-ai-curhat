@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Music, Volume2, VolumeX, Pause, Play, ExternalLink, Power } from "lucide-react";
+import { Music, Volume2, VolumeX, Play, Pause, CloudRain, Flame, Coffee, Moon } from "lucide-react";
 import { Button } from "./ui/button";
 import { Slider } from "./ui/slider";
 import {
@@ -9,165 +9,124 @@ import {
 } from "./ui/popover";
 import { cn } from "./ui/utils";
 
-// Requested Video: https://www.youtube.com/watch?v=hoZEi4zina4
-// Background Mode: Autoplay, Muted, Loop, No Controls
-const VIDEO_ID = "hoZEi4zina4";
-const LS_KEY_AMBIENT = "tenang_ambient_enabled";
+const SOUNDS = [
+    {
+        id: "rain",
+        name: "Hujan Deras",
+        icon: CloudRain,
+        url: "https://actions.google.com/sounds/v1/weather/rain_heavy_loud.ogg",
+        defaultVol: 0.5,
+        color: "text-blue-400"
+    },
+    {
+        id: "fire",
+        name: "Api Unggun",
+        icon: Flame,
+        url: "https://actions.google.com/sounds/v1/household/crackling_fireplace.ogg",
+        defaultVol: 0,
+        color: "text-orange-400"
+    },
+    {
+        id: "cafe",
+        name: "Suasana Kafe",
+        icon: Coffee,
+        url: "https://actions.google.com/sounds/v1/crowds/restaurant_ambience.ogg",
+        defaultVol: 0,
+        color: "text-amber-600"
+    },
+    {
+        id: "night",
+        name: "Malam Hari",
+        icon: Moon,
+        url: "https://actions.google.com/sounds/v1/animals/crickets_in_field.ogg",
+        defaultVol: 0,
+        color: "text-indigo-400"
+    }
+];
+
+const LS_KEY_AMBIENT = "tenang_ambient_volumes";
+const LS_KEY_PLAYING = "tenang_ambient_playing";
 
 export function AmbientPlayer() {
-    // Persistent on/off state — defaults to OFF so it doesn't annoy users
-    const [isEnabled, setIsEnabled] = useState(() => localStorage.getItem(LS_KEY_AMBIENT) === "true");
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [volume, setVolume] = useState([0.5]); // Default volume 50% (but starts muted)
-    const playerRef = useRef<any>(null);
     const [isOpen, setIsOpen] = useState(false);
-    const [isPlayerReady, setIsPlayerReady] = useState(false);
+    
+    // Global playing state
+    const [isPlaying, setIsPlaying] = useState(() => localStorage.getItem(LS_KEY_PLAYING) === "true");
 
-    // Persist enabled state
+    // Volumes state
+    const [volumes, setVolumes] = useState<Record<string, number>>(() => {
+        const saved = localStorage.getItem(LS_KEY_AMBIENT);
+        if (saved) {
+            try { return JSON.parse(saved); } catch (e) { }
+        }
+        const initial: Record<string, number> = {};
+        SOUNDS.forEach(s => initial[s.id] = s.defaultVol);
+        return initial;
+    });
+
+    // Refs for audio elements
+    const audioRefs = useRef<Record<string, HTMLAudioElement | null>>({});
+
+    // Save state to LS
     useEffect(() => {
-        localStorage.setItem(LS_KEY_AMBIENT, isEnabled ? "true" : "false");
-    }, [isEnabled]);
+        localStorage.setItem(LS_KEY_AMBIENT, JSON.stringify(volumes));
+    }, [volumes]);
 
     useEffect(() => {
-        // Only load YouTube player if enabled
-        if (!isEnabled) return;
+        localStorage.setItem(LS_KEY_PLAYING, isPlaying ? "true" : "false");
+    }, [isPlaying]);
 
-        // Load YouTube IFrame API
-        if (!(window as any).YT) {
-            const tag = document.createElement('script');
-            tag.src = "https://www.youtube.com/iframe_api";
-            const firstScriptTag = document.getElementsByTagName('script')[0];
-            firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-        }
-
-        const createPlayer = () => {
-            // Don't create if element doesn't exist
-            const el = document.getElementById('youtube-background');
-            if (!el) return;
-
-            const playerConfig = {
-                height: '100%',
-                width: '100%',
-                videoId: VIDEO_ID,
-                playerVars: {
-                    'autoplay': 1,      // Auto-play
-                    'controls': 0,      // No controls
-                    'disablekb': 1,     // No keyboard
-                    'fs': 0,            // No fullscreen button
-                    'loop': 1,          // Loop
-                    'modestbranding': 1,
-                    'playsinline': 1,
-                    'rel': 0,
-                    'showinfo': 0,
-                    'mute': 1,          // WAJIB: Muted (required for autoplay)
-                    'playlist': VIDEO_ID, // Required for loop to work
-                    'origin': window.location.origin,
-                },
-                events: {
-                    'onReady': onPlayerReady,
-                    'onStateChange': onPlayerStateChange,
-                }
-            };
-            playerRef.current = new (window as any).YT.Player('youtube-background', playerConfig);
-        };
-
-        if ((window as any).YT && (window as any).YT.Player) {
-            createPlayer();
-        } else {
-            (window as any).onYouTubeIframeAPIReady = createPlayer;
-        }
-
-        // CLEANUP: Destroy player on unmount or disable
-        return () => {
-            if (playerRef.current?.destroy) {
-                playerRef.current.destroy();
-                playerRef.current = null;
-            }
-            setIsPlayerReady(false);
-            setIsPlaying(false);
-        }
-    }, [isEnabled]);
-
-    // 2. SOLUSI AMAN: Jangan unmute di onReady
-    const onPlayerReady = (event: any) => {
-        setIsPlayerReady(true);
-        event.target.mute(); // Ensure muted
-        event.target.playVideo(); // Force play
-    };
-
-    // 4. FIX STATE: isPlaying set false valid
-    const onPlayerStateChange = (event: any) => {
-        // 1 = Playing
-        if (event.data === 1) {
-            setIsPlaying(true);
-        }
-        // 2 = Paused, 0 = Ended
-        if (event.data === 2 || event.data === 0) {
-            setIsPlaying(false);
-            if (event.data === 0) {
-                // Manual Loop fallback
-                event.target.playVideo();
-            }
-        }
-    };
-
-    // 1. FIX VOLUME: Math.round integer 0-100
+    // Handle Play/Pause
     useEffect(() => {
-        if (playerRef.current && isPlayerReady && typeof playerRef.current.setVolume === 'function') {
-            const vol = Math.round(volume[0] * 100);
-
-            // Only update volume, don't force unmute here to allow safe autoplay
-            playerRef.current.setVolume(vol);
-
-            // If user explicitly drags slider > 0, we can try to unmute
-            if (vol > 0 && isPlaying) {
-                playerRef.current.unMute();
-            } else if (vol === 0) {
-                playerRef.current.mute();
-            }
-        }
-    }, [volume, isPlayerReady, isPlaying]);
-
-    // 3. FIX TOGGLE: Unlock audio context
-    const togglePlay = () => {
-        if (playerRef.current && isPlayerReady) {
-            // UNLOCK Audio Context
-            playerRef.current.unMute();
-            playerRef.current.setVolume(Math.round(volume[0] * 100));
-
-            if (isPlaying) {
-                playerRef.current.pauseVideo();
+        Object.entries(audioRefs.current).forEach(([id, audio]) => {
+            if (!audio) return;
+            if (isPlaying && volumes[id] > 0) {
+                audio.play().catch(() => {
+                    // Browser might block autoplay
+                    if (isPlaying) setIsPlaying(false);
+                });
             } else {
-                playerRef.current.playVideo();
+                audio.pause();
             }
-        }
+        });
+    }, [isPlaying, volumes]);
+
+    // Handle Volume Change
+    useEffect(() => {
+        Object.entries(audioRefs.current).forEach(([id, audio]) => {
+            if (!audio) return;
+            audio.volume = volumes[id];
+            
+            // Auto play/pause when sliding from/to 0
+            if (isPlaying) {
+                if (volumes[id] > 0 && audio.paused) audio.play().catch(()=>{});
+                else if (volumes[id] === 0 && !audio.paused) audio.pause();
+            }
+        });
+    }, [volumes, isPlaying]);
+
+    const handleVolumeChange = (id: string, newVol: number) => {
+        setVolumes(prev => ({ ...prev, [id]: newVol }));
     };
 
-    // Toggle enabled/disabled
-    const toggleEnabled = () => {
-        if (isEnabled) {
-            // Turning off — stop and destroy player
-            if (playerRef.current?.pauseVideo) {
-                playerRef.current.pauseVideo();
-            }
-            setIsEnabled(false);
-        } else {
-            // Turning on — will trigger useEffect to create player
-            setIsEnabled(true);
-        }
+    const togglePlay = () => {
+        setIsPlaying(!isPlaying);
     };
+
+    const activeSoundsCount = Object.values(volumes).filter(v => v > 0).length;
 
     return (
         <>
-            {/* Background Video Layer — only render when enabled */}
-            {isEnabled && (
-                <div className="fixed inset-0 w-full h-full -z-50 overflow-hidden pointer-events-none">
-                    <div className="absolute inset-0 bg-black/60 z-10" /> {/* Dark Overlay for Readability */}
-                    <div className="w-[300%] h-[300%] -ml-[100%] -mt-[100%]"> {/* Scale to cover */}
-                        <div id="youtube-background" className="w-full h-full" />
-                    </div>
-                </div>
-            )}
+            {/* Hidden Audio Elements */}
+            {SOUNDS.map(sound => (
+                <audio
+                    key={sound.id}
+                    ref={el => { audioRefs.current[sound.id] = el; }}
+                    src={sound.url}
+                    loop
+                    preload="auto"
+                />
+            ))}
 
             {/* Floating Control Button */}
             <div className="fixed bottom-6 left-6 z-50">
@@ -176,103 +135,82 @@ export function AmbientPlayer() {
                         <Button
                             className={cn(
                                 "w-12 h-12 rounded-full shadow-2xl transition-all duration-300 hover:scale-110",
-                                isEnabled && isPlaying
-                                    ? "bg-red-600/90 hover:bg-red-700 backdrop-blur-sm text-white border-2 border-red-400/50"
+                                isPlaying && activeSoundsCount > 0
+                                    ? "bg-teal-600/90 hover:bg-teal-700 backdrop-blur-sm text-white border-2 border-teal-400/50"
                                     : "bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/20"
                             )}
                             size="icon"
                         >
-                            {isEnabled && isPlaying ? (
+                            {isPlaying && activeSoundsCount > 0 ? (
                                 <Music className="w-5 h-5 animate-pulse" />
                             ) : (
                                 <Music className="w-5 h-5 opacity-50" />
                             )}
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-80 p-4 mb-2 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl" side="top" align="start">
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between pb-2 border-b border-white/10">
-                                <h4 className="font-semibold text-sm text-white flex items-center gap-2">
-                                    <Music className="w-4 h-4 text-red-400" />
-                                    Background Ambience
-                                </h4>
-                                {isEnabled && isPlaying && <span className="text-[10px] text-green-400 font-mono animate-pulse">LIVE</span>}
-                            </div>
-
-                            {/* ON/OFF Master Toggle */}
-                            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
-                                <div className="flex items-center gap-2">
-                                    <Power className={`w-4 h-4 ${isEnabled ? "text-green-400" : "text-gray-500"}`} />
-                                    <div>
-                                        <p className="text-sm font-semibold text-white">
-                                            {isEnabled ? "Aktif" : "Nonaktif"}
-                                        </p>
-                                        <p className="text-[10px] text-gray-400">
-                                            Yura Yunita — Tenang
-                                        </p>
-                                    </div>
+                    
+                    <PopoverContent className="w-80 p-5 mb-2 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl" side="top" align="start">
+                        <div className="space-y-6">
+                            {/* Header */}
+                            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                                <div>
+                                    <h4 className="font-bold text-base text-white flex items-center gap-2">
+                                        <Music className="w-4 h-4 text-teal-400" />
+                                        Soundscapes
+                                    </h4>
+                                    <p className="text-[10px] text-gray-400 mt-1">Mix suara alam untuk ketenangan</p>
                                 </div>
-                                <button 
-                                    onClick={toggleEnabled}
-                                    className={`relative w-12 h-7 rounded-full transition-colors ${
-                                        isEnabled ? "bg-green-500" : "bg-gray-600"
-                                    }`}
+                                <Button
+                                    onClick={togglePlay}
+                                    size="icon"
+                                    className={cn(
+                                        "rounded-full w-10 h-10 shadow-lg transition-colors",
+                                        isPlaying ? "bg-teal-500 hover:bg-teal-600" : "bg-gray-700 hover:bg-gray-600"
+                                    )}
                                 >
-                                    <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform ${
-                                        isEnabled ? "translate-x-5" : "translate-x-0.5"
-                                    }`} />
-                                </button>
+                                    {isPlaying ? <Pause className="fill-current w-4 h-4" /> : <Play className="fill-current w-4 h-4 pl-0.5" />}
+                                </Button>
                             </div>
 
-                            {/* Play/Pause + Volume — only show when enabled */}
-                            {isEnabled && (
-                                <>
-                                    <div className="flex justify-center">
-                                        <Button
-                                            onClick={togglePlay}
-                                            size="lg"
-                                            className="rounded-full w-12 h-12 bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/20"
-                                            disabled={!isPlayerReady}
-                                        >
-                                            {isPlaying ? <Pause className="fill-current w-5 h-5" /> : <Play className="fill-current w-5 h-5 pl-1" />}
-                                        </Button>
-                                    </div>
-
-                                    {/* Volume */}
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between text-xs text-gray-400">
-                                            <span>Volume</span>
-                                            <span>{Math.round(volume[0] * 100)}%</span>
+                            {/* Mixers */}
+                            <div className="space-y-4">
+                                {SOUNDS.map(sound => {
+                                    const Icon = sound.icon;
+                                    const vol = volumes[sound.id] || 0;
+                                    return (
+                                        <div key={sound.id} className="space-y-2">
+                                            <div className="flex items-center justify-between text-xs">
+                                                <div className="flex items-center gap-2">
+                                                    <Icon className={cn("w-4 h-4", vol > 0 ? sound.color : "text-gray-500")} />
+                                                    <span className={vol > 0 ? "text-gray-200 font-medium" : "text-gray-500"}>
+                                                        {sound.name}
+                                                    </span>
+                                                </div>
+                                                <span className="text-gray-400 font-mono w-8 text-right">
+                                                    {Math.round(vol * 100)}%
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <button onClick={() => handleVolumeChange(sound.id, vol === 0 ? 0.5 : 0)}>
+                                                    {vol === 0 ? (
+                                                        <VolumeX className="w-4 h-4 text-gray-600" />
+                                                    ) : (
+                                                        <Volume2 className={cn("w-4 h-4", sound.color)} />
+                                                    )}
+                                                </button>
+                                                <Slider
+                                                    value={[vol]}
+                                                    max={1}
+                                                    step={0.01}
+                                                    onValueChange={(val) => handleVolumeChange(sound.id, val[0])}
+                                                    className="w-full cursor-pointer"
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-3">
-                                            <button onClick={() => setVolume(volume[0] === 0 ? [0.5] : [0])}>
-                                                {volume[0] === 0 ? <VolumeX className="w-4 h-4 text-gray-500" /> : <Volume2 className="w-4 h-4 text-red-400" />}
-                                            </button>
-                                            <Slider
-                                                value={volume}
-                                                max={1}
-                                                step={0.01}
-                                                onValueChange={setVolume}
-                                                className="w-full cursor-pointer"
-                                            />
-                                        </div>
-                                        <p className="text-[10px] text-gray-500 text-center mt-1">
-                                            *Video mulai <strong>Mute</strong> (aturan browser). Naikkan volume atau klik Play untuk dengar.
-                                        </p>
-                                    </div>
-                                </>
-                            )}
-
-                            <div className="pt-2 text-center">
-                                <a
-                                    href={`https://www.youtube.com/watch?v=${VIDEO_ID}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-[10px] text-gray-500 hover:text-red-400 flex items-center justify-center gap-1"
-                                >
-                                    Buka di YouTube <ExternalLink className="w-3 h-3" />
-                                </a>
+                                    );
+                                })}
                             </div>
+
                         </div>
                     </PopoverContent>
                 </Popover>

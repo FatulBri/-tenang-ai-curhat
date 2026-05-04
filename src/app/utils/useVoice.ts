@@ -65,15 +65,25 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
       return;
     }
 
-    // LANGKAH 1: Minta izin mikrofon secara eksplisit.
-    // Di desktop, SpeechRecognition kadang gagal memicu popup izin secara otomatis.
-    // getUserMedia sangat handal untuk memancing popup izin.
+    // LANGKAH 1: Minta izin mikrofon secara eksplisit jika belum diizinkan.
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // LANGKAH 2: Lepaskan mikrofon seketika!
-      // Ini adalah kunci stabilitas di mobile (Android/iOS).
-      // Jika stream ditahan, SpeechRecognition akan bentrok dan gagal mendeteksi suara.
-      stream.getTracks().forEach(track => track.stop());
+      // Check permission state first if supported
+      let needsPrompt = true;
+      if (navigator.permissions && navigator.permissions.query) {
+        try {
+          const perm = await navigator.permissions.query({ name: 'microphone' as any });
+          if (perm.state === 'granted') needsPrompt = false;
+        } catch (e) { /* ignore */ }
+      }
+
+      if (needsPrompt) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Lepaskan mikrofon
+        stream.getTracks().forEach(track => track.stop());
+        // JEDA PENTING: Tunggu hardware dilepas oleh OS sebelum SpeechRecognition mengambil alih
+        // Tanpa jeda ini, Chrome sering melempar error "network" atau "audio-capture"
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
     } catch (err: any) {
       console.error("Microphone permission error:", err);
       onError?.("Akses mikrofon ditolak. Mohon izinkan mikrofon di pengaturan browser.");
@@ -101,7 +111,11 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
     recognition.onerror = (event: any) => {
       console.error("Speech error", event.error);
       if (event.error !== "no-speech" && event.error !== "aborted") {
-        onError?.(event.error);
+        if (event.error === "network") {
+          onError?.("Koneksi jaringan terputus atau API Suara (Google) diblokir oleh browser. Coba matikan AdBlock/VPN.");
+        } else {
+          onError?.(event.error);
+        }
         setIsListening(false);
       }
     };

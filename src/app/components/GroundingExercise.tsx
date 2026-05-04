@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Eye, Hand, Volume2, Flower, Utensils, ChevronRight, CheckCircle2 } from "lucide-react";
+import { X, Eye, Hand, Volume2, VolumeX, Flower, Utensils, ChevronRight, CheckCircle2 } from "lucide-react";
 import { Button } from "./ui/button";
+import { useTextToSpeech } from "../utils/useVoice";
+import { useApp } from "../context/AppContext";
 
 interface Props {
   onClose: () => void;
@@ -53,6 +55,25 @@ const STEPS = [
 export function GroundingExercise({ onClose }: Props) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
+  const [voiceGuide, setVoiceGuide] = useState(true);
+
+  const { ttsVoice, speechLang } = useApp();
+  const { speak, stop } = useTextToSpeech({ voiceURI: ttsVoice, lang: speechLang, rate: 0.95 });
+
+  const step = STEPS[currentStep];
+
+  useEffect(() => {
+    if (voiceGuide && !isFinished) {
+      speak(step.instruction);
+    } else if (isFinished && voiceGuide) {
+      speak("Bagus sekali. Tarik napas panjang, dan hembuskan. Anda sudah lebih tenang sekarang.");
+    }
+  }, [currentStep, voiceGuide, isFinished, step.instruction, speak]);
+
+  // Cleanup
+  useEffect(() => {
+    return () => stop();
+  }, [stop]);
 
   const handleNext = () => {
     if (currentStep < STEPS.length - 1) {
@@ -62,7 +83,6 @@ export function GroundingExercise({ onClose }: Props) {
     }
   };
 
-  const step = STEPS[currentStep];
 
   return (
     <motion.div
@@ -71,12 +91,28 @@ export function GroundingExercise({ onClose }: Props) {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#030213]/95 backdrop-blur-3xl p-6"
     >
-      <button
-        onClick={onClose}
-        className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
-      >
-        <X className="w-5 h-5" />
-      </button>
+      {/* Top Controls */}
+      <div className="absolute top-6 right-6 flex gap-3">
+        <button
+          onClick={() => {
+            setVoiceGuide(v => !v);
+            if (voiceGuide) stop();
+            else if (!isFinished) speak(STEPS[currentStep].instruction);
+          }}
+          className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+            voiceGuide ? "bg-teal-500/20 text-teal-300 hover:bg-teal-500/30" : "bg-white/10 hover:bg-white/20 text-gray-400"
+          }`}
+          title={voiceGuide ? "Matikan Pemandu Suara" : "Nyalakan Pemandu Suara"}
+        >
+          {voiceGuide ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+        </button>
+        <button
+          onClick={onClose}
+          className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
 
       <div className="max-w-md w-full">
         <AnimatePresence mode="wait">

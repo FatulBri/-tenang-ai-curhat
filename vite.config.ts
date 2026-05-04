@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   plugins: [
@@ -9,6 +10,27 @@ export default defineConfig({
     // Tailwind is not being actively used – do not remove them
     react(),
     tailwindcss(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      devOptions: {
+        enabled: true
+      },
+      manifest: {
+        name: 'TENANG AI Anonymous Curhat',
+        short_name: 'Tenang AI',
+        description: 'Ruang aman untuk berdialog. Bebas, anonim, rahasia.',
+        theme_color: '#030213',
+        background_color: '#030213',
+        display: 'standalone',
+        icons: [
+          {
+            src: 'https://cdn-icons-png.flaticon.com/512/3220/3220677.png',
+            sizes: '512x512',
+            type: 'image/png'
+          }
+        ]
+      }
+    }),
   ],
   server: {
     proxy: {

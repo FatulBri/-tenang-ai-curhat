@@ -4,7 +4,7 @@ import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { useApp } from "../context/AppContext";
-import { MessageCircle, Sparkles, Search, Trash2, Bookmark, BookmarkCheck, Trash } from "lucide-react";
+import { MessageCircle, Sparkles, Search, Trash2, Bookmark, BookmarkCheck, Trash, Download } from "lucide-react";
 import { Navigation } from "../components/Navigation";
 import { Footer } from "../components/Footer";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,6 +15,37 @@ export function HistoryPage() {
   const [selectedCurhat, setSelectedCurhat] = useState<typeof curhats[0] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "bookmarked">("all");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleBurnDelete = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeletingId(id);
+    setTimeout(() => {
+      deleteCurhat(id);
+      setDeletingId(null);
+    }, 800); // 800ms for burn animation
+  };
+
+  const exportHistory = () => {
+    let content = "RIWAYAT CURHAT - TENANG AI\n";
+    content += "========================================\n\n";
+    curhats.forEach(c => {
+      content += `Tanggal: ${c.timestamp.toLocaleString('id-ID')}\n`;
+      content += `Mood: ${c.mood} | Kategori: ${c.category || "Umum"}\n\n`;
+      c.messages.forEach(m => {
+        content += `${m.role === "user" ? "Anda" : "AI"}: ${m.content}\n\n`;
+      });
+      content += "----------------------------------------\n\n";
+    });
+
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Riwayat_Curhat_${new Date().toISOString().split('T')[0]}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const filteredCurhats = curhats
     .filter(c => filter === "all" || c.bookmarked)
@@ -81,8 +112,17 @@ export function HistoryPage() {
               </button>
             </div>
 
-             {/* Clear All */}
-             <Button
+              {/* Export All */}
+              <Button
+                variant="outline"
+                onClick={exportHistory}
+                className="hidden md:flex border-teal-200 dark:border-teal-800 text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-2xl"
+              >
+                <Download className="w-4 h-4 mr-2" /> Ekspor (TXT)
+              </Button>
+
+              {/* Clear All */}
+              <Button
                 variant="ghost"
                 onClick={clearAllCurhats}
                 className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl"
@@ -121,13 +161,35 @@ export function HistoryPage() {
                   key={curhat.id}
                   layout
                   initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  animate={deletingId === curhat.id ? { 
+                    opacity: 0, 
+                    scale: 0.8, 
+                    filter: "sepia(1) hue-rotate(-50deg) saturate(5) brightness(0.6) blur(4px)",
+                    y: -20
+                  } : { opacity: 1, scale: 1, filter: "none", y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: deletingId === curhat.id ? 0.8 : 0.2 }}
+                  className="relative"
                 >
+                  {/* Fire Particles Overlay */}
+                  <AnimatePresence>
+                    {deletingId === curhat.id && (
+                      <motion.div 
+                        initial={{ opacity: 0, bottom: 0 }}
+                        animate={{ opacity: [0, 1, 0], bottom: "100%" }}
+                        transition={{ duration: 0.8 }}
+                        className="absolute inset-0 z-10 flex justify-center items-end pointer-events-none overflow-hidden rounded-3xl"
+                      >
+                         <div className="w-full h-full bg-gradient-to-t from-orange-600 via-red-500 to-transparent mix-blend-color-burn opacity-80" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
                   <Card
-                    onClick={() => setSelectedCurhat(curhat)}
-                    className="group relative p-6 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl hover:shadow-2xl transition-all cursor-pointer border border-gray-100 dark:border-slate-700/50 rounded-3xl overflow-hidden"
+                    onClick={() => { if (!deletingId) setSelectedCurhat(curhat); }}
+                    className={`group p-6 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl hover:shadow-2xl transition-all cursor-pointer border border-gray-100 dark:border-slate-700/50 rounded-3xl overflow-hidden relative ${
+                      deletingId === curhat.id ? "pointer-events-none" : ""
+                    }`}
                   >
                     <div className="flex items-start gap-4">
                       <span className="text-4xl filter drop-shadow-sm flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
@@ -160,8 +222,9 @@ export function HistoryPage() {
                               {curhat.bookmarked ? <Bookmark className="w-4 h-4 fill-current" /> : <Bookmark className="w-4 h-4" />}
                             </button>
                             <button 
-                              onClick={(e) => { e.stopPropagation(); deleteCurhat(curhat.id); }}
+                              onClick={(e) => handleBurnDelete(curhat.id, e)}
                               className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-full transition-colors"
+                              title="Hapus / Bakar"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>

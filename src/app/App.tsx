@@ -9,9 +9,13 @@ import { HistoryPage } from "./pages/HistoryPage";
 import { HotlinePage } from "./pages/HotlinePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { VoiceCurhatPage } from "./pages/VoiceCurhatPage";
+import { GardenPage } from "./pages/GardenPage";
+import { SelfCarePage } from "./pages/SelfCarePage";
 import { PanicButton } from "./components/PanicButton";
 import { AmbientPlayer } from "./components/AmbientPlayer";
 import { OnboardingModal } from "./components/OnboardingModal";
+import { PinLock } from "./components/PinLock";
+import { DailyGachaModal } from "./components/DailyGachaModal";
 import { Toaster } from "sonner";
 import { useEffect } from "react";
 
@@ -22,11 +26,13 @@ export default function App() {
 
   return (
     <AppProvider>
+      <PinLock />
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <div className="min-h-screen">
           <Toaster position="top-right" richColors closeButton />
           <OnboardingModal />
           <AmbientPlayer />
+          <DailyGachaModal />
 
           <Routes>
             <Route path="/" element={<LandingPage />} />
@@ -38,6 +44,8 @@ export default function App() {
             <Route path="/hotline" element={<HotlinePage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/voice-curhat" element={<VoiceCurhatPage />} />
+            <Route path="/garden" element={<GardenPage />} />
+            <Route path="/self-care" element={<SelfCarePage />} />
           </Routes>
 
           {/* Floating Panic Button - visible on all pages except hotline */}

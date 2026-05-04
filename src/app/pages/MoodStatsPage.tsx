@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { useApp } from "../context/AppContext";
-import { History, TrendingUp, BarChart2, LineChart as LineChartIcon, Brain, Sparkles, Lightbulb } from "lucide-react";
+import { History, TrendingUp, BarChart2, LineChart as LineChartIcon, Brain, Sparkles, Lightbulb, CalendarDays } from "lucide-react";
 import { generateAIInsights, AIInsight } from "../utils/insights";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
@@ -66,7 +66,25 @@ function buildWordCloud(messages: string[]): { word: string; count: number; size
   return sorted.map(([word, count]) => ({ word, count, size: Math.round(12 + (count / max) * 24) }));
 }
 
-type ChartView = "bar" | "trend" | "analysis";
+function buildHeatmapData(moods: { mood: string; date: Date }[]) {
+  const days: { date: Date; score: number | null }[] = [];
+  // Generate last 84 days (12 weeks)
+  for (let i = 83; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    
+    // Find moods for this day
+    const dayEntries = moods.filter(m => new Date(m.date).toDateString() === d.toDateString());
+    let score = null;
+    if (dayEntries.length > 0) {
+      score = dayEntries.reduce((s, m) => s + (moodScore[m.mood] || 3), 0) / dayEntries.length;
+    }
+    
+    days.push({ date: d, score });
+  }
+  return days;
+}
+
+type ChartView = "bar" | "trend" | "analysis" | "heatmap";
 
 export function MoodStatsPage() {
   const navigate = useNavigate();
@@ -97,6 +115,7 @@ export function MoodStatsPage() {
   const trendData = buildTrendData(moods);
   const dominantMood = Object.entries(moodCounts).sort((a, b) => b[1] - a[1])[0];
   const avgScore = moods.length ? (moods.reduce((s, m) => s + (moodScore[m.mood] || 3), 0) / moods.length).toFixed(1) : null;
+  const heatmapData = buildHeatmapData(moods);
 
   // Word cloud from user messages
   const allUserMessages = curhats.flatMap(c => c.messages.filter(m => m.role === "user").map(m => m.content));
@@ -310,16 +329,16 @@ export function MoodStatsPage() {
                 <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                   <div>
                     <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">
-                      {chartView === "bar" ? "Distribusi Mood" : chartView === "trend" ? "Tren Mood 7 Hari" : "Analisis Mendalam"}
+                      {chartView === "bar" ? "Distribusi Mood" : chartView === "trend" ? "Tren Mood 7 Hari" : chartView === "heatmap" ? "Kalender Emosi" : "Analisis Mendalam"}
                     </h3>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                      {chartView === "bar" ? "Frekuensi tiap jenis mood" : chartView === "trend" ? "Skor rata-rata emosi per hari" : "Word cloud & breakdown emosi"}
+                      {chartView === "bar" ? "Frekuensi tiap jenis mood" : chartView === "trend" ? "Skor rata-rata emosi per hari" : chartView === "heatmap" ? "Pola emosional 12 minggu terakhir" : "Word cloud & breakdown emosi"}
                     </p>
                   </div>
-                  <div className="flex gap-1 p-1 bg-gray-100 dark:bg-slate-800 rounded-xl">
-                    {([["bar", <BarChart2 key="b" className="w-3.5 h-3.5" />, "Distribusi"], ["trend", <LineChartIcon key="t" className="w-3.5 h-3.5" />, "Tren"], ["analysis", <Brain key="a" className="w-3.5 h-3.5" />, "Analisis"]] as const).map(([v, icon, label]) => (
+                  <div className="flex gap-1 p-1 bg-gray-100 dark:bg-slate-800 rounded-xl overflow-x-auto no-scrollbar max-w-full">
+                    {([["bar", <BarChart2 key="b" className="w-3.5 h-3.5" />, "Distribusi"], ["trend", <LineChartIcon key="t" className="w-3.5 h-3.5" />, "Tren"], ["heatmap", <CalendarDays key="h" className="w-3.5 h-3.5" />, "Heatmap"], ["analysis", <Brain key="a" className="w-3.5 h-3.5" />, "Analisis"]] as const).map(([v, icon, label]) => (
                       <button key={v} onClick={() => setChartView(v as ChartView)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
                           chartView === v ? "bg-white dark:bg-slate-700 text-teal-600 dark:text-teal-400 shadow-sm" : "text-gray-500 dark:text-gray-400"
                         }`}>
                         {icon} {label}
@@ -376,6 +395,63 @@ export function MoodStatsPage() {
                         {[["😢 1", "Sangat Sedih"], ["😔 2", "Sedih"], ["😐 3", "Netral"], ["🙂 4", "Bahagia"], ["😁 5", "Sangat Bahagia"]].map(([score, label]) => (
                           <span key={score} className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">{score} = {label}</span>
                         ))}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {chartView === "heatmap" && (
+                    <motion.div key="heatmap" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}>
+                      <div className="w-full overflow-x-auto pb-4 custom-scrollbar">
+                        <div className="min-w-[600px] flex flex-col gap-1">
+                          {/* We map columns of weeks (12 weeks) and rows of days (7 days) */}
+                          {/* To render horizontally: outer loop is row (day of week 0-6), inner is week (0-11) */}
+                          {Array.from({ length: 7 }).map((_, dayOfWeek) => (
+                            <div key={`dow-${dayOfWeek}`} className="flex gap-1">
+                              <span className="w-8 text-[10px] text-gray-400 dark:text-gray-500 flex items-center">
+                                {dayOfWeek === 1 ? "Sen" : dayOfWeek === 3 ? "Rab" : dayOfWeek === 5 ? "Jum" : ""}
+                              </span>
+                              {Array.from({ length: 12 }).map((_, weekIndex) => {
+                                // Calculate the index in our flat 84-day array
+                                // days[0] is 84 days ago. 
+                                // To align, we need to know the starting day of the week.
+                                // Let's just render the grid simply: columns are 12 periods of 7 days
+                                const index = weekIndex * 7 + dayOfWeek;
+                                const data = heatmapData[index];
+                                if (!data) return <div key={index} className="w-4 h-4 rounded-sm bg-transparent" />;
+                                
+                                let bgColor = "bg-gray-100 dark:bg-slate-800"; // Empty/null
+                                if (data.score !== null) {
+                                  if (data.score >= 4.5) bgColor = "bg-orange-400"; // Very Happy
+                                  else if (data.score >= 3.5) bgColor = "bg-emerald-500"; // Happy
+                                  else if (data.score >= 2.5) bgColor = "bg-gray-400"; // Neutral
+                                  else if (data.score >= 1.5) bgColor = "bg-blue-400"; // Sad
+                                  else bgColor = "bg-purple-500"; // Very Sad
+                                }
+
+                                return (
+                                  <div 
+                                    key={`day-${index}`} 
+                                    title={`${data.date.toLocaleDateString('id-ID')}: ${data.score !== null ? `Skor ${data.score.toFixed(1)}` : 'Kosong'}`}
+                                    className={`w-5 h-5 rounded-md ${bgColor} hover:scale-125 transition-transform cursor-pointer border border-black/5 dark:border-white/5`}
+                                  />
+                                );
+                              })}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-between items-center mt-4">
+                        <div className="text-xs text-gray-400 font-medium">Lebih Sedih</div>
+                        <div className="flex gap-1.5">
+                          <div className="w-3 h-3 rounded-sm bg-gray-100 dark:bg-slate-800" title="Kosong"></div>
+                          <div className="w-3 h-3 rounded-sm bg-purple-500" title="Sangat Sedih"></div>
+                          <div className="w-3 h-3 rounded-sm bg-blue-400" title="Sedih"></div>
+                          <div className="w-3 h-3 rounded-sm bg-gray-400" title="Netral"></div>
+                          <div className="w-3 h-3 rounded-sm bg-emerald-500" title="Bahagia"></div>
+                          <div className="w-3 h-3 rounded-sm bg-orange-400" title="Sangat Bahagia"></div>
+                        </div>
+                        <div className="text-xs text-gray-400 font-medium">Lebih Bahagia</div>
                       </div>
                     </motion.div>
                   )}

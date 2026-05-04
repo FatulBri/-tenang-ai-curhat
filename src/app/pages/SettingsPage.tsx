@@ -13,6 +13,8 @@ import {
   Check,
   AlertTriangle,
   Volume2,
+  Lock,
+  Ghost,
   Mic,
   Camera
 } from "lucide-react";
@@ -37,9 +39,12 @@ export function SettingsPage() {
     ttsVoice, setTtsVoice,
     speechLang, setSpeechLang,
     faceDetectionEnabled, setFaceDetectionEnabled,
+    incognitoMode, setIncognitoMode,
+    appPin, setAppPin,
   } = useApp();
 
   const [tempApiKey, setTempApiKey] = useState(apiKey);
+  const [newPin, setNewPin] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
 
@@ -66,6 +71,21 @@ export function SettingsPage() {
       if (ok) toast.success("Data berhasil dipulihkan!");
       else toast.error("Gagal mengimpor data. Format file salah.");
     }
+  };
+
+  const handleSavePin = () => {
+    if (newPin.length !== 4) {
+      toast.error("PIN harus 4 digit angka.");
+      return;
+    }
+    setAppPin(newPin);
+    setNewPin("");
+    toast.success("PIN berhasil dipasang. Aplikasi akan terkunci jika ditinggalkan.");
+  };
+
+  const handleRemovePin = () => {
+    setAppPin(null);
+    toast.success("PIN berhasil dihapus.");
   };
 
   const containerVariants = {
@@ -320,6 +340,59 @@ export function SettingsPage() {
                 </div>
                 
                 <div className="space-y-6">
+                  {/* Incognito Mode */}
+                  <div className="flex items-center justify-between p-4 bg-slate-500/5 rounded-2xl border border-slate-500/10">
+                    <div className="pr-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Ghost className="w-4 h-4 text-slate-500" />
+                        <h4 className="font-bold text-sm text-gray-800 dark:text-gray-200">Mode Rahasia (Incognito)</h4>
+                      </div>
+                      <p className="text-xs text-gray-500">Percakapan tidak akan disimpan di LocalStorage dan langsung terhapus saat web dimuat ulang.</p>
+                    </div>
+                    <button 
+                      onClick={() => setIncognitoMode(!incognitoMode)}
+                      className={`relative w-12 h-7 rounded-full transition-colors mt-1 shrink-0 ${
+                        incognitoMode ? "bg-slate-700" : "bg-gray-300 dark:bg-slate-600"
+                      }`}
+                    >
+                      <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform ${
+                        incognitoMode ? "translate-x-5" : "translate-x-0.5"
+                      }`} />
+                    </button>
+                  </div>
+
+                  {/* App Lock PIN */}
+                  <div className="p-4 bg-orange-500/5 rounded-2xl border border-orange-500/10 space-y-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Lock className="w-4 h-4 text-orange-500" />
+                      <h4 className="font-bold text-sm text-gray-800 dark:text-gray-200">Kunci Aplikasi (PIN)</h4>
+                    </div>
+                    <p className="text-xs text-gray-500">Kunci layar aplikasi saat ditinggalkan (pindah tab/minimize) untuk mencegah orang lain membaca curhat Anda.</p>
+                    
+                    {appPin ? (
+                      <div className="flex items-center justify-between bg-white/50 dark:bg-slate-800/50 p-3 rounded-xl border border-gray-200 dark:border-slate-700">
+                        <span className="text-sm font-bold text-gray-800 dark:text-gray-200 tracking-[0.5em]">••••</span>
+                        <Button variant="ghost" size="sm" onClick={handleRemovePin} className="text-red-500 hover:bg-red-500/10 hover:text-red-600 h-8">
+                          Hapus PIN
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input 
+                          type="password"
+                          maxLength={4}
+                          placeholder="Buat 4 digit PIN..."
+                          value={newPin}
+                          onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, ''))}
+                          className="bg-white/50 dark:bg-slate-800/50 border-gray-200 dark:border-slate-700 rounded-xl flex-1 text-center tracking-[0.5em] font-bold"
+                        />
+                        <Button onClick={handleSavePin} disabled={newPin.length !== 4} className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl">
+                          Pasang
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex items-center justify-between p-4 bg-teal-500/5 rounded-2xl border border-teal-500/10">
                     <div>
                       <h4 className="font-bold text-sm text-gray-800 dark:text-gray-200">Backup Data</h4>

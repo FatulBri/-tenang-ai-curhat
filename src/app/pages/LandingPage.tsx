@@ -167,10 +167,17 @@ export function LandingPage() {
         {/* Dark mode base */}
         <div className="absolute inset-0 bg-[#030213] hidden dark:block"></div>
 
-        {/* Glowing Orbs */}
-        <div className="absolute top-[10%] left-[15%] w-[40vw] h-[40vw] max-w-[500px] max-h-[500px] bg-teal-400/20 dark:bg-teal-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] animate-blob"></div>
-        <div className="absolute top-[30%] right-[10%] w-[35vw] h-[35vw] max-w-[450px] max-h-[450px] bg-purple-400/20 dark:bg-purple-700/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] animate-blob animation-delay-2000"></div>
-        <div className="absolute bottom-[20%] left-[30%] w-[45vw] h-[45vw] max-w-[550px] max-h-[550px] bg-sky-200/30 dark:bg-blue-600/10 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[120px] animate-blob animation-delay-4000"></div>
+        {/* Glowing Orbs - Enhanced for Landing */}
+        <motion.div 
+          animate={{ x: [0, 50, 0], y: [0, 100, 0] }}
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+          className="absolute top-[-10%] left-[10%] w-[50vw] h-[50vw] bg-teal-400/20 dark:bg-teal-600/20 rounded-full filter blur-[120px]" 
+        />
+        <motion.div 
+          animate={{ x: [0, -70, 0], y: [0, -50, 0] }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          className="absolute bottom-[-10%] right-[10%] w-[45vw] h-[45vw] bg-purple-400/20 dark:bg-purple-700/20 rounded-full filter blur-[120px]" 
+        />
       </div>
     </div>
   );

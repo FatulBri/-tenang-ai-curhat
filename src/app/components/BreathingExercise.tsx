@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Wind } from "lucide-react";
+import { X, Wind, Volume2, VolumeX } from "lucide-react";
+import { useTextToSpeech } from "../utils/useVoice";
+import { useApp } from "../context/AppContext";
 
 interface Props {
   onClose: () => void;
@@ -20,8 +22,23 @@ export function BreathingExercise({ onClose }: Props) {
   const [count, setCount] = useState(0);
   const [cycles, setCycles] = useState(0);
   const [running, setRunning] = useState(true);
+  const [voiceGuide, setVoiceGuide] = useState(true);
+
+  const { ttsVoice, speechLang } = useApp();
+  const { speak, stop } = useTextToSpeech({ voiceURI: ttsVoice, lang: speechLang, rate: 0.9 });
 
   const current = PHASES[phaseIdx];
+
+  useEffect(() => {
+    if (running && voiceGuide) {
+      speak(current.label);
+    }
+  }, [phaseIdx, running, voiceGuide, current.label, speak]);
+
+  // Clean up speech on close
+  useEffect(() => {
+    return () => stop();
+  }, [stop]);
 
   const nextPhase = useCallback(() => {
     setPhaseIdx(prev => {
@@ -134,13 +151,27 @@ export function BreathingExercise({ onClose }: Props) {
         ))}
       </div>
 
-      {/* Pause / Resume */}
-      <button
-        onClick={() => setRunning(r => !r)}
-        className="mt-8 px-6 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-sm font-semibold transition-colors"
-      >
-        {running ? "⏸ Jeda" : "▶ Lanjutkan"}
-      </button>
+      {/* Controls */}
+      <div className="mt-8 flex gap-3">
+        <button
+          onClick={() => setRunning(r => !r)}
+          className="px-6 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-sm font-semibold transition-colors flex items-center gap-2"
+        >
+          {running ? "⏸ Jeda" : "▶ Lanjutkan"}
+        </button>
+        <button
+          onClick={() => {
+            setVoiceGuide(v => !v);
+            if (voiceGuide) stop();
+          }}
+          className={`px-4 py-2.5 rounded-full text-white text-sm font-semibold transition-colors flex items-center gap-2 ${
+            voiceGuide ? "bg-teal-500/20 text-teal-300 hover:bg-teal-500/30" : "bg-white/10 hover:bg-white/20 text-gray-400"
+          }`}
+          title={voiceGuide ? "Matikan Pemandu Suara" : "Nyalakan Pemandu Suara"}
+        >
+          {voiceGuide ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+        </button>
+      </div>
 
       <p className="mt-6 text-white/20 text-xs max-w-xs text-center">
         Teknik 4-7-8 membantu menenangkan sistem saraf dan mengurangi kecemasan secara cepat.

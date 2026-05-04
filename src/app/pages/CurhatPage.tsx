@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Send, Mic, Square, Maximize2, Minimize2 } from "lucide-react";
+import { Send, Mic, Square, Maximize2, Minimize2, Sparkles } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import {
@@ -19,15 +19,46 @@ import { Navigation } from "../components/Navigation";
 import { Footer } from "../components/Footer";
 import { motion, AnimatePresence } from "framer-motion";
 import { CrisisBanner } from "../components/CrisisBanner";
+import { toast } from "sonner";
+import { EmotionalAvatar } from "../components/EmotionalAvatar";
+
+const ICEBREAKER_PROMPTS = [
+  "Apa satu hal yang paling menguras energimu hari ini?",
+  "Ceritakan satu hal kecil yang bikin kamu tersenyum hari ini.",
+  "Kalau perasaanmu sekarang adalah sebuah cuaca, seperti apa cuacanya?",
+  "Ada beban pikiran apa yang membuatmu sulit tenang akhir-akhir ini?",
+  "Apa hal yang sangat ingin kamu katakan kepada seseorang, tapi tidak bisa?",
+  "Ceritakan sebuah momen hari ini di mana kamu merasa 'cukup'."
+];
 
 export function CurhatPage() {
   const navigate = useNavigate();
-  const { addCurhat, setCurrentCurhat, addMood, speechLang, faceDetectionEnabled } = useApp();
+  const { addCurhat, setCurrentCurhat, addMood, speechLang, faceDetectionEnabled, setThemeColor } = useApp();
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [persona, setPersona] = useState("psikolog");
   const [zenMode, setZenMode] = useState(false);
   const [currentEmotion, setCurrentEmotion] = useState<Emotion | null>(null);
+
+  // Adaptive Theming Effect
+  useEffect(() => {
+    if (!currentEmotion) return;
+    
+    const emotionColors: Record<string, string> = {
+      happy: "#f59e0b",
+      sad: "#3b82f6",
+      angry: "#ef4444",
+      surprised: "#ec4899",
+      fearful: "#8b5cf6",
+      disgusted: "#10b981",
+      neutral: "#14b8a6",
+    };
+
+    if (emotionColors[currentEmotion]) {
+      setThemeColor(emotionColors[currentEmotion]);
+    }
+  }, [currentEmotion, setThemeColor]);
+  const [icebreakers, setIcebreakers] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Speech Recognition via hook
@@ -44,7 +75,11 @@ export function CurhatPage() {
       setMessage(prev => prev + (prev.length > 0 && !prev.endsWith(' ') ? ' ' : '') + transcript);
     },
     onError: (err) => {
-      alert(`Speech error: ${err}. Gunakan Chrome/Edge.`);
+      if (err === "network") {
+        toast.error("Koneksi Speech API terputus. Gunakan Chrome murni (non-Brave) dan matikan AdBlock.");
+      } else {
+        toast.error(`Speech Error: ${err}`);
+      }
     },
   });
 
@@ -60,6 +95,21 @@ export function CurhatPage() {
   useEffect(() => {
     autoResize();
   }, [message, autoResize]);
+
+  // Load random icebreakers
+  useEffect(() => {
+    const shuffled = [...ICEBREAKER_PROMPTS].sort(() => 0.5 - Math.random());
+    setIcebreakers(shuffled.slice(0, 3));
+  }, []);
+
+  const handleIcebreakerClick = (prompt: string) => {
+    if (!message) {
+      setMessage(prompt + " ");
+    } else {
+      setMessage(prev => prev + "\n\n" + prompt + " ");
+    }
+    textareaRef.current?.focus();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,15 +161,18 @@ export function CurhatPage() {
     }`}>
       {!zenMode && <Navigation />}
 
-      {/* Floating Face Detector (Compact) */}
+      {/* Floating Face Detector + Avatar */}
       {faceDetectionEnabled && !zenMode && (
-        <div className="absolute top-20 right-4 sm:right-6 z-20 w-24 sm:w-32 drop-shadow-lg opacity-80 hover:opacity-100 transition-opacity">
-          <FaceEmotionDetector 
-            enabled={faceDetectionEnabled} 
-            onEmotionChange={setCurrentEmotion} 
-            compact={true} 
-            className="aspect-[4/3] rounded-xl ring-1 ring-white/10 shadow-xl"
-          />
+        <div className="absolute top-20 right-4 sm:right-6 z-20 flex flex-col items-center gap-3">
+          <div className="w-24 sm:w-32 drop-shadow-lg opacity-80 hover:opacity-100 transition-opacity">
+            <FaceEmotionDetector 
+              enabled={faceDetectionEnabled} 
+              onEmotionChange={setCurrentEmotion} 
+              compact={true} 
+              className="aspect-[4/3] rounded-xl ring-1 ring-white/10 shadow-xl"
+            />
+          </div>
+          <EmotionalAvatar emotion={currentEmotion} />
         </div>
       )}
 
@@ -189,6 +242,28 @@ export function CurhatPage() {
 
               {/* Crisis Detection Banner */}
               <CrisisBanner text={message} />
+
+              {/* Icebreaker Cards */}
+              {!zenMode && message.length === 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    <span>Bingung mau mulai dari mana?</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {icebreakers.map((prompt, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => handleIcebreakerClick(prompt)}
+                        className="text-left text-xs p-3 rounded-xl bg-amber-50/50 hover:bg-amber-100 dark:bg-amber-900/10 dark:hover:bg-amber-900/30 border border-amber-200/50 dark:border-amber-700/30 text-gray-700 dark:text-gray-300 transition-colors shadow-sm"
+                      >
+                        "{prompt}"
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Message Textarea */}
               <div className="space-y-3">
@@ -347,7 +422,10 @@ export function CurhatPage() {
          <div className="absolute inset-0 bg-[#030213] hidden dark:block"></div>
 
         {/* Glowing Orbs */}
-        <div className="absolute top-[10%] right-[10%] w-[35vw] h-[35vw] max-w-[400px] max-h-[400px] bg-teal-400/20 dark:bg-teal-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] animate-blob"></div>
+        <div 
+          className="absolute top-[10%] right-[10%] w-[35vw] h-[35vw] max-w-[400px] max-h-[400px] rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] animate-blob"
+          style={{ backgroundColor: `var(--accent-color)` + '33' }} // 33 is ~20% opacity
+        ></div>
         <div className="absolute bottom-[10%] left-[10%] w-[40vw] h-[40vw] max-w-[450px] max-h-[450px] bg-purple-400/20 dark:bg-purple-800/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[120px] animate-blob animation-delay-3000"></div>
       </div>
       )}

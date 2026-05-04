@@ -22,6 +22,34 @@ export interface MoodEntry {
   date: Date;
 }
 
+export interface GratitudeEntry {
+  id: string;
+  content: string;
+  date: Date;
+}
+
+export interface Bottle {
+  id: string;
+  message: string;
+  timestamp: Date;
+  isUserMessage?: boolean;
+}
+
+export interface Quest {
+  id: string;
+  text: string;
+  completed: boolean;
+  type: 'drink' | 'stretch' | 'praise' | 'breathe' | 'walk';
+}
+
+export interface TimeCapsule {
+  id: string;
+  message: string;
+  createdAt: Date;
+  openAt: Date;
+  isOpened: boolean;
+}
+
 interface AppContextType {
   curhats: Curhat[];
   addCurhat: (curhat: Curhat) => void;
@@ -58,6 +86,29 @@ interface AppContextType {
   isBlooming: boolean;
   exportData: () => void;
   importData: (file: File) => Promise<boolean>;
+  incognitoMode: boolean;
+  setIncognitoMode: (v: boolean) => void;
+  appPin: string | null;
+  setAppPin: (v: string | null) => void;
+  isAppLocked: boolean;
+  setIsAppLocked: (v: boolean) => void;
+  // Gratitude Garden
+  gratitudes: GratitudeEntry[];
+  addGratitude: (content: string) => void;
+  // Bottle System
+  bottles: Bottle[];
+  sendBottle: (message: string) => void;
+  getNewBottle: () => Bottle | null;
+  // Adaptive Theming
+  themeColor: string;
+  setThemeColor: (color: string) => void;
+  // Quests
+  quests: Quest[];
+  completeQuest: (id: string) => void;
+  // Time Capsules
+  capsules: TimeCapsule[];
+  createCapsule: (message: string, days: number) => void;
+  openCapsule: (id: string) => void;
 }
 
 export interface Badge {
@@ -97,6 +148,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch { return []; }
   });
 
+  const [gratitudes, setGratitudes] = useState<GratitudeEntry[]>(() => {
+    const saved = localStorage.getItem("tenang_gratitudes");
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      return parsed.map((g: any) => ({ ...g, date: new Date(g.date) }));
+    } catch { return []; }
+  });
+
+  const [bottles, setBottles] = useState<Bottle[]>(() => {
+    const saved = localStorage.getItem("tenang_bottles");
+    if (!saved) {
+      // Default initial bottles
+      return [
+        { id: "b1", message: "Jangan lupa untuk bernapas dalam-dalam hari ini. Kamu hebat!", timestamp: new Date(), isUserMessage: false },
+        { id: "b2", message: "Semuanya akan membaik pada waktunya. Tetap semangat!", timestamp: new Date(), isUserMessage: false },
+        { id: "b3", message: "Kamu tidak sendirian. Kita semua berjuang bersama.", timestamp: new Date(), isUserMessage: false },
+      ];
+    }
+    try {
+      const parsed = JSON.parse(saved);
+      return parsed.map((b: any) => ({ ...b, timestamp: new Date(b.timestamp) }));
+    } catch { return []; }
+  });
+
   const [darkMode, setDarkMode] = useState(false);
   const [currentCurhat, setCurrentCurhat] = useState<Curhat | null>(null);
   const [apiKey, setApiKey] = useState(() => localStorage.getItem("gemini_api_key") || import.meta.env.VITE_GEMINI_API_KEY || "");
@@ -111,6 +187,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   // Face Detection settings
   const [faceDetectionEnabled, setFaceDetectionEnabled] = useState(() => localStorage.getItem("tenang_face_detection") === "true");
+
+  // Privacy Settings
+  const [incognitoMode, setIncognitoMode] = useState(() => localStorage.getItem("tenang_incognito") === "true");
+  const [appPin, setAppPin] = useState<string | null>(() => localStorage.getItem("tenang_pin") || null);
+  const [isAppLocked, setIsAppLocked] = useState(() => !!localStorage.getItem("tenang_pin"));
+  const [themeColor, setThemeColor] = useState("#14b8a6"); // Default teal-500
+
+  const [quests, setQuests] = useState<Quest[]>(() => {
+    const saved = localStorage.getItem("tenang_quests");
+    const lastDate = localStorage.getItem("tenang_quests_date");
+    const today = new Date().toDateString();
+
+    if (saved && lastDate === today) {
+      return JSON.parse(saved);
+    }
+    
+    // Generate new quests for the day
+    const allQuests: Quest[] = [
+      { id: "q1", text: "Minum segelas air putih", completed: false, type: "drink" },
+      { id: "q2", text: "Tarik napas dalam 3 kali", completed: false, type: "breathe" },
+      { id: "q3", text: "Berikan 1 pujian untuk dirimu", completed: false, type: "praise" },
+      { id: "q4", text: "Peregangan leher dan bahu", completed: false, type: "stretch" },
+      { id: "q5", text: "Jalan santai selama 5 menit", completed: false, type: "walk" },
+    ];
+    // Pick 3 random
+    const picked = allQuests.sort(() => 0.5 - Math.random()).slice(0, 3);
+    localStorage.setItem("tenang_quests_date", today);
+    return picked;
+  });
+
+  const [capsules, setCapsules] = useState<TimeCapsule[]>(() => {
+    const saved = localStorage.getItem("tenang_capsules");
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      return parsed.map((c: any) => ({
+        ...c,
+        createdAt: new Date(c.createdAt),
+        openAt: new Date(c.openAt)
+      }));
+    } catch { return []; }
+  });
 
   // Calculate streak (consecutive days with mood or curhat entries)
   const streak = (() => {
@@ -160,12 +278,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Sync back to localStorage
   useEffect(() => {
-    localStorage.setItem("tenang_curhats", JSON.stringify(curhats));
-  }, [curhats]);
+    if (!incognitoMode) {
+      localStorage.setItem("tenang_curhats", JSON.stringify(curhats));
+    } else {
+      localStorage.removeItem("tenang_curhats"); // Clear immediately if entering incognito
+    }
+  }, [curhats, incognitoMode]);
 
   useEffect(() => {
     localStorage.setItem("tenang_moods", JSON.stringify(moods));
   }, [moods]);
+
+  useEffect(() => {
+    localStorage.setItem("tenang_gratitudes", JSON.stringify(gratitudes));
+  }, [gratitudes]);
+
+  useEffect(() => {
+    localStorage.setItem("tenang_bottles", JSON.stringify(bottles));
+  }, [bottles]);
+
+  useEffect(() => {
+    localStorage.setItem("tenang_quests", JSON.stringify(quests));
+  }, [quests]);
+
+  useEffect(() => {
+    localStorage.setItem("tenang_capsules", JSON.stringify(capsules));
+  }, [capsules]);
 
   useEffect(() => {
     localStorage.setItem("gemini_api_key", apiKey);
@@ -207,6 +345,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [darkMode]);
 
+  useEffect(() => {
+    localStorage.setItem("tenang_incognito", incognitoMode ? "true" : "false");
+  }, [incognitoMode]);
+
+  useEffect(() => {
+    if (appPin) {
+      localStorage.setItem("tenang_pin", appPin);
+    } else {
+      localStorage.removeItem("tenang_pin");
+    }
+  }, [appPin]);
+
+  // Update CSS variable for global theming
+  useEffect(() => {
+    document.documentElement.style.setProperty('--accent-color', themeColor);
+  }, [themeColor]);
+
+  // Lock app on visibility change
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && appPin) {
+        setIsAppLocked(true);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [appPin]);
+
   const addCurhat = (curhat: Curhat) => {
     setCurhats(prev => [curhat, ...prev]);
   };
@@ -234,6 +400,57 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (window.confirm("Hapus seluruh riwayat curhat? Tindakan ini tidak bisa dibatalkan.")) {
       setCurhats([]);
     }
+  };
+
+  const addGratitude = (content: string) => {
+    const newEntry: GratitudeEntry = {
+      id: Date.now().toString(),
+      content,
+      date: new Date(),
+    };
+    setGratitudes(prev => [newEntry, ...prev]);
+  };
+
+  const sendBottle = (message: string) => {
+    const newBottle: Bottle = {
+      id: Date.now().toString(),
+      message,
+      timestamp: new Date(),
+      isUserMessage: true,
+    };
+    setBottles(prev => [newBottle, ...prev]);
+  };
+
+  const getNewBottle = () => {
+    if (bottles.length === 0) return null;
+    // Get a random bottle that is NOT a user message (to simulate global pool)
+    // Or just any random one if all are user messages
+    const others = bottles.filter(b => !b.isUserMessage);
+    const source = others.length > 0 ? others : bottles;
+    return source[Math.floor(Math.random() * source.length)];
+  };
+
+  const completeQuest = (id: string) => {
+    setQuests(prev => prev.map(q => q.id === id ? { ...q, completed: true } : q));
+  };
+
+  const createCapsule = (message: string, days: number) => {
+    const now = new Date();
+    const openAt = new Date(now);
+    openAt.setDate(now.getDate() + days);
+    
+    const newCapsule: TimeCapsule = {
+      id: Date.now().toString(),
+      message,
+      createdAt: now,
+      openAt,
+      isOpened: false
+    };
+    setCapsules(prev => [newCapsule, ...prev]);
+  };
+
+  const openCapsule = (id: string) => {
+    setCapsules(prev => prev.map(c => c.id === id ? { ...c, isOpened: true } : c));
   };
 
   const toggleDarkMode = () => {
@@ -307,6 +524,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isBlooming,
         exportData,
         importData,
+        incognitoMode,
+        setIncognitoMode,
+        appPin,
+        setAppPin,
+        isAppLocked,
+        setIsAppLocked,
+        gratitudes,
+        addGratitude,
+        bottles,
+        sendBottle,
+        getNewBottle,
+        themeColor,
+        setThemeColor,
+        quests,
+        completeQuest,
+        capsules,
+        createCapsule,
+        openCapsule,
       }}
     >
       {children}

@@ -1,15 +1,20 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertCircle, Wind, X, Phone } from "lucide-react";
+import { AlertCircle, Wind, X, Phone, Moon } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { BreathingExercise } from "./BreathingExercise";
 import { GroundingExercise } from "./GroundingExercise";
+import { SleepStoryModal } from "./SleepStoryModal";
+import { ReleaseBubble } from "./ReleaseBubble";
+import { Sparkles } from "lucide-react";
 
 export function PanicButton() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [showBreathing, setShowBreathing] = useState(false);
   const [showGrounding, setShowGrounding] = useState(false);
+  const [showSleepStory, setShowSleepStory] = useState(false);
+  const [showRelease, setShowRelease] = useState(false);
 
   return (
     <>
@@ -20,6 +25,12 @@ export function PanicButton() {
         )}
         {showGrounding && (
           <GroundingExercise onClose={() => setShowGrounding(false)} />
+        )}
+        {showSleepStory && (
+          <SleepStoryModal onClose={() => setShowSleepStory(false)} />
+        )}
+        {showRelease && (
+          <ReleaseBubble onClose={() => setShowRelease(false)} />
         )}
       </AnimatePresence>
 
@@ -63,6 +74,20 @@ export function PanicButton() {
               >
                 <AlertCircle className="w-4 h-4" />
                 Teknik Grounding ⚓
+              </button>
+              <button
+                onClick={() => { setOpen(false); setShowSleepStory(true); }}
+                className="flex items-center gap-3 px-5 py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl shadow-xl font-semibold text-sm transition-all hover:-translate-y-0.5"
+              >
+                <Moon className="w-4 h-4" />
+                Dongeng Tidur 🌙
+              </button>
+              <button
+                onClick={() => { setOpen(false); setShowRelease(true); }}
+                className="flex items-center gap-3 px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl shadow-xl font-semibold text-sm transition-all hover:-translate-y-0.5"
+              >
+                <Sparkles className="w-4 h-4" />
+                Lepaskan Saja ✨
               </button>
             </motion.div>
           </>

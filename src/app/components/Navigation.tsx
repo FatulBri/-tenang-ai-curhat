@@ -1,294 +1,140 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
+  Heart,
   Menu,
   X,
-  Heart,
-  MessageCircle,
-  History,
-  Phone,
-  Moon,
-  Sun,
-  ChevronDown,
-  BarChart3,
   Settings as SettingsIcon,
-  Mic,
+  Sun,
+  Moon,
+  MessageCircle,
+  Flower,
+  Trophy,
+  Phone,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
-import { useNotification } from "../utils/useNotification";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function Navigation() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { darkMode, toggleDarkMode, curhats, moods, apiKey, notificationsEnabled } = useApp();
+  const { darkMode, toggleDarkMode } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  useNotification(notificationsEnabled);
 
   const isActive = (path: string) => location.pathname === path;
 
-  const menuItems = {
-    curhat: {
-      label: "Curhat",
-      icon: MessageCircle,
-      items: [
-        { label: "Mulai Curhat", path: "/curhat", icon: MessageCircle },
-        { label: "Mode Suara 🎙️", path: "/voice-curhat", icon: Mic },
-        { label: "Riwayat Curhat", path: "/history", icon: History, badge: curhats.length },
-      ]
-    },
-    mood: {
-      label: "Mood",
-      icon: Heart,
-      items: [
-        { label: "Catat Mood", path: "/mood-tracker", icon: Heart },
-        { label: "Statistik Mood", path: "/mood-stats", icon: BarChart3, badge: moods.length },
-      ]
-    },
-    bantuan: {
-      label: "Bantuan",
-      icon: Phone,
-      items: [
-        { label: "Hotline Darurat", path: "/hotline", icon: Phone },
-      ]
-    }
-  };
-
-
+  const navItems = [
+    { label: "Curhat", path: "/curhat", icon: MessageCircle, color: "bg-teal-500" },
+    { label: "Mood", path: "/mood-stats", icon: Heart, color: "bg-purple-500" },
+    { label: "Taman", path: "/garden", icon: Flower, color: "bg-emerald-500" },
+    { label: "Misi", path: "/self-care", icon: Trophy, color: "bg-indigo-500" },
+  ];
 
   return (
-    <header className="bg-white/60 dark:bg-[#030213]/60 backdrop-blur-2xl shadow-sm sticky top-0 z-50 border-b border-white/20 dark:border-white/5 transition-colors duration-500">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <button
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2 group"
-          >
-            <Heart className="w-8 h-8 text-teal-500 fill-teal-500 group-hover:scale-110 transition-transform" />
-            <span className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-purple-600 dark:from-teal-400 dark:to-purple-400">
-              TENANG
-            </span>
-          </button>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-2">
-            {/* Curhat Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-all">
-                <MessageCircle className="w-4 h-4" />
-                <span>Curhat</span>
-                <ChevronDown className="w-4 h-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
-                {menuItems.curhat.items.map((item) => (
-                  <DropdownMenuItem
-                    key={item.path}
-                    onClick={() => navigate(item.path)}
-                    className="cursor-pointer hover:bg-teal-50 dark:hover:bg-teal-900/20"
-                  >
-                    <item.icon className="w-4 h-4 mr-2 text-teal-600 dark:text-teal-400" />
-                    <span className="flex-1">{item.label}</span>
-                    {item.badge !== undefined && item.badge > 0 && (
-                      <span className="ml-2 px-2 py-0.5 text-xs bg-teal-500 text-white rounded-full">
-                        {item.badge}
-                      </span>
-                    )}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Mood Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-all">
-                <Heart className="w-4 h-4" />
-                <span>Mood</span>
-                <ChevronDown className="w-4 h-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
-                {menuItems.mood.items.map((item) => (
-                  <DropdownMenuItem
-                    key={item.path}
-                    onClick={() => navigate(item.path)}
-                    className="cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                  >
-                    <item.icon className="w-4 h-4 mr-2 text-purple-600 dark:text-purple-400" />
-                    <span className="flex-1">{item.label}</span>
-                    {item.badge !== undefined && item.badge > 0 && (
-                      <span className="ml-2 px-2 py-0.5 text-xs bg-purple-500 text-white rounded-full">
-                        {item.badge}
-                      </span>
-                    )}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Bantuan Link */}
-            <button
-              onClick={() => navigate("/hotline")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${isActive("/hotline")
-                ? "bg-red-500 text-white shadow-lg"
-                : "text-gray-700 dark:text-gray-200 hover:bg-red-50 dark:hover:bg-red-900/20"
-                }`}
-            >
-              <Phone className="w-4 h-4" />
-              <span>Bantuan Darurat</span>
-            </button>
-
-            <DropdownMenuSeparator className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2" />
-
-            <DropdownMenuSeparator className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2" />
-            
-            {/* Settings Link */}
-            <button
-              onClick={() => navigate("/settings")}
-              className={`p-2 rounded-lg transition-colors ${isActive("/settings")
-                ? "bg-teal-500 text-white shadow-lg"
-                : "bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600"
-                }`}
-              aria-label="Settings"
-            >
-              <SettingsIcon className={`w-5 h-5 ${isActive("/settings") ? "text-white" : apiKey ? "text-teal-600 dark:text-teal-400" : "text-gray-500"}`} />
-            </button>
-
-            {/* Dark Mode Toggle */}
-            <button
-              onClick={toggleDarkMode}
-              className="p-2 rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
-              aria-label="Toggle dark mode"
-            >
-              {darkMode ? (
-                <Sun className="w-5 h-5 text-yellow-500" />
-              ) : (
-                <Moon className="w-5 h-5 text-slate-700" />
-              )}
-            </button>
-          </nav>
-
-          {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center gap-2">
-            <button
-              onClick={toggleDarkMode}
-              className="p-2 rounded-lg bg-gray-100 dark:bg-slate-700"
-              aria-label="Toggle dark mode"
-            >
-              {darkMode ? (
-                <Sun className="w-5 h-5 text-yellow-500" />
-              ) : (
-                <Moon className="w-5 h-5 text-slate-700" />
-              )}
-            </button>
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700"
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200 dark:border-slate-700 animate-in slide-in-from-top">
-            <div className="space-y-2">
-              {/* Curhat Section */}
-              <div className="space-y-1">
-                <div className="px-4 py-2 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                  Curhat
+    <header className="sticky top-0 z-[100] w-full px-4 py-6 md:px-8 pointer-events-none">
+      <div className="mx-auto max-w-6xl pointer-events-auto">
+        <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/50 dark:border-white/10 rounded-[2rem] shadow-2xl transition-all duration-500 overflow-hidden">
+          <div className="flex h-16 items-center justify-between px-6">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate("/")}
+                className="flex items-center gap-3 group transition-transform active:scale-95"
+              >
+                <div className="relative">
+                  <div className="absolute inset-0 bg-teal-400 blur-md opacity-0 group-hover:opacity-40 transition-opacity" />
+                  <Heart className="h-8 w-8 text-teal-500 fill-teal-500 group-hover:scale-110 transition-transform duration-500" />
                 </div>
-                {menuItems.curhat.items.map((item) => (
-                  <button
-                    key={item.path}
-                    onClick={() => {
-                      navigate(item.path);
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive(item.path)
-                      ? "bg-gradient-to-r from-teal-500 to-purple-500 text-white"
-                      : "text-gray-700 dark:text-gray-200 hover:bg-teal-50 dark:hover:bg-teal-900/20"
-                      }`}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    <span className="flex-1 text-left">{item.label}</span>
-                    {item.badge !== undefined && item.badge > 0 && (
-                      <span className="px-2 py-0.5 text-xs bg-teal-500 text-white rounded-full">
-                        {item.badge}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
+                <span className="text-xl font-black tracking-tighter text-gray-900 dark:text-white uppercase hidden sm:block">
+                  Tenang
+                </span>
+              </button>
+            </div>
 
-              {/* Mood Section */}
-              <div className="space-y-1 pt-2">
-                <div className="px-4 py-2 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                  Mood Tracker
-                </div>
-                {menuItems.mood.items.map((item) => (
-                  <button
-                    key={item.path}
-                    onClick={() => {
-                      navigate(item.path);
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive(item.path)
-                      ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                      : "text-gray-700 dark:text-gray-200 hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                      }`}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    <span className="flex-1 text-left">{item.label}</span>
-                    {item.badge !== undefined && item.badge > 0 && (
-                      <span className="px-2 py-0.5 text-xs bg-purple-500 text-white rounded-full">
-                        {item.badge}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
+            {/* Desktop Nav */}
+            <nav className="hidden md:flex items-center gap-2">
+              {navItems.map((item) => (
+                <button
+                  key={item.path}
+                  onClick={() => navigate(item.path)}
+                  className={`flex items-center gap-2 px-5 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all duration-300 ${
+                    isActive(item.path)
+                      ? `${item.color} text-white shadow-lg shadow-black/5 scale-105`
+                      : "text-gray-600 dark:text-gray-200 hover:bg-white/50 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  <item.icon className="w-3.5 h-3.5" />
+                  {item.label.toUpperCase()}
+                </button>
+              ))}
 
-              {/* Emergency Help */}
-              <div className="pt-4 border-t border-gray-200 dark:border-slate-700">
-                <button
-                  onClick={() => {
-                    navigate("/hotline");
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-all"
-                >
-                  <Phone className="w-5 h-5" />
-                  <span className="flex-1 text-left">Bantuan Darurat</span>
-                </button>
-                <button
-                  onClick={() => {
-                    navigate("/settings");
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive("/settings")
-                    ? "bg-slate-900 dark:bg-slate-700 text-white"
-                    : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800"
-                    }`}
-                >
-                  <SettingsIcon className="w-5 h-5" />
-                  <span className="flex-1 text-left">Pengaturan</span>
-                </button>
-              </div>
+              <div className="w-px h-6 bg-gray-200 dark:bg-slate-800 mx-2" />
+
+              <button
+                onClick={toggleDarkMode}
+                className="p-2 rounded-xl text-gray-500 hover:bg-white dark:hover:bg-slate-800 transition-all active:rotate-45"
+              >
+                {darkMode ? <Sun className="w-5 h-5 text-yellow-500" /> : <Moon className="w-5 h-5" />}
+              </button>
+
+              <button
+                onClick={() => navigate("/settings")}
+                className={`p-2 rounded-xl transition-all ${isActive("/settings") ? "bg-slate-900 dark:bg-white text-white dark:text-black" : "text-gray-500 hover:bg-white dark:hover:bg-slate-800"}`}
+              >
+                <SettingsIcon className="w-5 h-5" />
+              </button>
+            </nav>
+
+            {/* Mobile Button */}
+            <div className="md:hidden flex items-center gap-2">
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-white"
+              >
+                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
             </div>
           </div>
-        )}
+
+          <AnimatePresence>
+            {mobileMenuOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="md:hidden border-t border-white/50 dark:border-white/5 bg-white/30 dark:bg-slate-900/30"
+              >
+                <div className="grid grid-cols-2 gap-2 p-4">
+                  {[...navItems, 
+                    { label: "Bantuan", path: "/hotline", icon: Phone, color: "bg-red-500" },
+                    { label: "Setelan", path: "/settings", icon: SettingsIcon, color: "bg-slate-700" }
+                  ].map((item) => (
+                    <button
+                      key={item.path}
+                      onClick={() => { navigate(item.path); setMobileMenuOpen(false); }}
+                      className={`flex flex-col items-center justify-center p-4 rounded-2xl gap-2 transition-all ${
+                        isActive(item.path) 
+                          ? `${item.color} text-white shadow-lg` 
+                          : "bg-white/50 dark:bg-slate-800/50 text-gray-700 dark:text-gray-200"
+                      }`}
+                    >
+                      <item.icon className="w-6 h-6" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="p-4 pt-0">
+                  <button
+                    onClick={() => { toggleDarkMode(); setMobileMenuOpen(false); }}
+                    className="w-full flex items-center justify-center gap-3 p-4 rounded-2xl bg-white/50 dark:bg-slate-800/50 text-gray-700 dark:text-gray-200"
+                  >
+                    {darkMode ? <Sun className="w-5 h-5 text-yellow-500" /> : <Moon className="w-5 h-5" />}
+                    <span className="text-[10px] font-black uppercase tracking-widest">{darkMode ? "Mode Terang" : "Mode Gelap"}</span>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </header>
   );

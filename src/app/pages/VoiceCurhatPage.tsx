@@ -61,7 +61,11 @@ export function VoiceCurhatPage() {
     continuous: true,
     onResult: handleTranscriptResult,
     onError: (err) => {
-      toast.error(`Speech Error: ${err}`);
+      if (err === "network") {
+        toast.error("Koneksi Speech API terputus. Pastikan internet stabil dan tidak diblokir AdBlock/VPN.");
+      } else {
+        toast.error(`Speech Error: ${err}`);
+      }
       setVoiceState("idle");
     },
   });

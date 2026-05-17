@@ -1,12 +1,16 @@
 {
-    "rewrites": [
-        {
-            "source": "/api/(.*)",
-            "destination": "/api/$1"
-        },
-        {
-            "source": "/(.*)",
-            "destination": "/index.html"
-        }
-    ]
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm install",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }

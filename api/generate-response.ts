@@ -10,17 +10,23 @@ const MODELS = [
   "gemini-flash-latest"
 ];
 
+/** Baca env server tanpa merujuk ke `process` (hindari TS2591 bila CI tidak memuat @types/node). */
+function serverEnv(key: string): string | undefined {
+  const proc = (globalThis as unknown as { process?: { env?: Record<string, string | undefined> } }).process;
+  return proc?.env?.[key];
+}
+
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
   }
 
   try {
-    const { messages, systemPrompt } = await req.json() as {
+    const { messages, systemPrompt } = (await req.json()) as {
       messages: { role: string; content: string }[];
       systemPrompt: string;
     };
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = serverEnv("GEMINI_API_KEY");
 
     if (!apiKey) {
       return new Response(

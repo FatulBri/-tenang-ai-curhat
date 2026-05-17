@@ -194,10 +194,11 @@ interface UseTextToSpeechOptions {
   lang?: string;
   onStart?: () => void;
   onEnd?: () => void;
+  onError?: () => void;
 }
 
 export function useTextToSpeech(options: UseTextToSpeechOptions = {}) {
-  const { rate = 1, voiceURI, lang = "id-ID", onStart, onEnd } = options;
+  const { rate = 1, voiceURI, lang = "id-ID", onStart, onEnd, onError } = options;
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
@@ -262,11 +263,12 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}) {
       setIsSpeaking(false);
       setIsPaused(false);
       setCurrentText("");
+      onError?.();
     };
 
     utteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
-  }, [isSupported, rate, lang, voiceURI, voices, onStart, onEnd]);
+  }, [isSupported, rate, lang, voiceURI, voices, onStart, onEnd, onError]);
 
   const pause = useCallback(() => {
     if (isSupported && isSpeaking) {

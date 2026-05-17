@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type TargetAndTransition } from "framer-motion";
 import { Emotion } from "../utils/useFaceEmotion";
 
 interface Props {
@@ -7,7 +7,7 @@ interface Props {
   compact?: boolean;
 }
 
-const AVATAR_STATES: Record<string, { face: string; bg: string; message: string; bodyAnim: object }> = {
+const AVATAR_STATES: Record<string, { face: string; bg: string; message: string; bodyAnim: TargetAndTransition }> = {
   happy: {
     face: "😊",
     bg: "from-amber-400/20 to-yellow-300/20",

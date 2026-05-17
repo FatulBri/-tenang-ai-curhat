@@ -3,14 +3,13 @@ import {
   Settings, 
   User, 
   Bot, 
-  Key, 
   Bell, 
+  Cloud,
   Download, 
   Upload, 
   Trash2, 
   ShieldCheck, 
   ChevronRight,
-  Check,
   AlertTriangle,
   Volume2,
   Lock,
@@ -30,7 +29,6 @@ import { toast } from "sonner";
 
 export function SettingsPage() {
   const { 
-    apiKey, setApiKey, 
     aiName, setAiName, 
     exportData, importData,
     clearAllCurhats,
@@ -43,7 +41,6 @@ export function SettingsPage() {
     appPin, setAppPin,
   } = useApp();
 
-  const [tempApiKey, setTempApiKey] = useState(apiKey);
   const [newPin, setNewPin] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
@@ -58,11 +55,6 @@ export function SettingsPage() {
     window.speechSynthesis.onvoiceschanged = loadVoices;
     return () => { window.speechSynthesis.onvoiceschanged = null; };
   }, []);
-
-  const handleSaveApi = () => {
-    setApiKey(tempApiKey);
-    toast.success("Pengaturan API berhasil disimpan");
-  };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -124,7 +116,7 @@ export function SettingsPage() {
             <div className="md:col-span-1 space-y-2">
               {[
                 { label: "Personalization", icon: User, active: true },
-                { label: "AI & API", icon: Key },
+                { label: "AI & server", icon: Cloud },
                 { label: "Suara & TTS", icon: Volume2 },
                 { label: "Data & Privacy", icon: ShieldCheck },
                 { label: "Notifications", icon: Bell },
@@ -167,37 +159,29 @@ export function SettingsPage() {
                 </div>
               </Card>
 
-              {/* API Integration */}
+              {/* AI backend (no client key) */}
               <Card className="p-6 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-white/5 rounded-3xl">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <Key className="w-5 h-5 text-purple-500" />
-                    <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">Google Gemini API</h3>
-                  </div>
-                  {apiKey && (
-                    <span className="px-3 py-1 bg-green-500/10 text-green-500 text-[10px] font-bold rounded-full flex items-center gap-1">
-                      <Check className="w-3 h-3" /> CONNECTED
-                    </span>
-                  )}
+                <div className="flex items-center gap-3 mb-4">
+                  <Cloud className="w-5 h-5 text-purple-500" />
+                  <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">Kunci AI (hanya di server)</h3>
                 </div>
-                
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase tracking-widest text-gray-400">API Key</Label>
-                    <div className="flex gap-2">
-                      <Input 
-                        type="password"
-                        placeholder="AIza..."
-                        value={tempApiKey}
-                        onChange={(e) => setTempApiKey(e.target.value)}
-                        className="bg-white/50 dark:bg-slate-800/50 border-gray-200 dark:border-slate-700 rounded-xl flex-1"
-                      />
-                      <Button onClick={handleSaveApi} className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl">Simpan</Button>
-                    </div>
-                    <p className="text-[10px] text-gray-500 mt-2">
-                      Dapatkan key secara gratis di <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-teal-500 underline">Google AI Studio</a>.
-                    </p>
-                  </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
+                  Kunci Google Gemini <strong className="font-semibold text-gray-800 dark:text-gray-200">tidak disimpan di browser</strong> dan tidak perlu Anda tempel di aplikasi. Pemilik deployment men-set variabel{" "}
+                  <code className="text-xs bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">GEMINI_API_KEY</code> di Vercel (atau platform lain). Pengguna hanya memakai aplikasi; kunci tetap di server.
+                </p>
+                <ul className="text-[11px] text-gray-500 dark:text-gray-400 space-y-2 list-disc pl-4 mb-4">
+                  <li>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-teal-600 dark:text-teal-400 underline font-medium">Google AI Studio</a>
+                    {" "}— buat kunci untuk dipasang di environment server.
+                  </li>
+                  <li>
+                    <a href="https://vercel.com/docs/projects/environment-variables" target="_blank" rel="noopener noreferrer" className="text-teal-600 dark:text-teal-400 underline font-medium">Environment variables (Vercel)</a>
+                    {" "}— tempel sebagai <code className="text-[10px] bg-gray-100 dark:bg-slate-800 px-1 rounded">GEMINI_API_KEY</code>, lalu redeploy.
+                  </li>
+                </ul>
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200/90 text-xs">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>Deploy statis tanpa backend (mis. hanya GitHub Pages tanpa API) tidak bisa memanggil Gemini lewat aplikasi ini kecuali Anda menambahkan proxy server terpisah.</span>
                 </div>
               </Card>
 

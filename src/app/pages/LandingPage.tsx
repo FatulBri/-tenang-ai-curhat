@@ -47,7 +47,7 @@ export function LandingPage() {
               />
               <Heart className="w-14 h-14 text-teal-500 fill-teal-500 relative z-10" />
             </div>
-            <h1 className="text-6xl md:text-7xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-teal-500 via-teal-400 to-purple-600 dark:from-teal-300 dark:via-teal-200 dark:to-purple-500">
+            <h1 className="text-6xl md:text-7xl font-extrabold tracking-tighter text-gradient-premium drop-shadow-sm">
               TENANG
             </h1>
           </motion.div>
@@ -78,7 +78,7 @@ export function LandingPage() {
           </motion.div>
 
           <AffirmationWidget />
-          
+
           <div className="w-full flex justify-center py-8">
             <DigitalGarden />
           </div>
@@ -96,7 +96,7 @@ export function LandingPage() {
           <motion.div
             variants={itemVariants}
             whileHover={{ y: -8, scale: 1.02 }}
-            className="group bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-8 rounded-3xl shadow-xl hover:shadow-2xl border border-white/40 dark:border-white/5 transition-all w-full flex flex-col items-center text-center relative overflow-hidden"
+            className="group glass-premium p-8 rounded-3xl transition-all w-full flex flex-col items-center text-center relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 dark:bg-teal-500/20 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-teal-500/20 transition-colors"></div>
             <div className="w-14 h-14 bg-teal-100 dark:bg-teal-900/40 rounded-2xl flex items-center justify-center mb-6 shadow-inner ring-1 ring-teal-500/20">
@@ -112,7 +112,7 @@ export function LandingPage() {
           <motion.div
             variants={itemVariants}
             whileHover={{ y: -8, scale: 1.02 }}
-            className="group bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-8 rounded-3xl shadow-xl hover:shadow-2xl border border-white/40 dark:border-white/5 transition-all w-full flex flex-col items-center text-center relative overflow-hidden"
+            className="group glass-premium p-8 rounded-3xl transition-all w-full flex flex-col items-center text-center relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 dark:bg-purple-500/20 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-purple-500/20 transition-colors"></div>
             <div className="w-14 h-14 bg-purple-100 dark:bg-purple-900/40 rounded-2xl flex items-center justify-center mb-6 shadow-inner ring-1 ring-purple-500/20">
@@ -168,15 +168,15 @@ export function LandingPage() {
         <div className="absolute inset-0 bg-[#030213] hidden dark:block"></div>
 
         {/* Glowing Orbs - Enhanced for Landing */}
-        <motion.div 
+        <motion.div
           animate={{ x: [0, 50, 0], y: [0, 100, 0] }}
           transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute top-[-10%] left-[10%] w-[50vw] h-[50vw] bg-teal-400/20 dark:bg-teal-600/20 rounded-full filter blur-[120px]" 
+          className="absolute top-[-10%] left-[10%] w-[50vw] h-[50vw] bg-teal-400/20 dark:bg-teal-600/20 rounded-full filter blur-[120px]"
         />
-        <motion.div 
+        <motion.div
           animate={{ x: [0, -70, 0], y: [0, -50, 0] }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute bottom-[-10%] right-[10%] w-[45vw] h-[45vw] bg-purple-400/20 dark:bg-purple-700/20 rounded-full filter blur-[120px]" 
+          className="absolute bottom-[-10%] right-[10%] w-[45vw] h-[45vw] bg-purple-400/20 dark:bg-purple-700/20 rounded-full filter blur-[120px]"
         />
       </div>
     </div>

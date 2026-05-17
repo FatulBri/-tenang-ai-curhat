@@ -5,7 +5,6 @@ import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { useApp, ChatMessage } from "../context/AppContext";
 import { generateAIResponse, mapAIMoodToKey } from "../utils/aiResponse";
-import { useTypewriter } from "../utils/useTypewriter";
 import { useTextToSpeech } from "../utils/useVoice";
 import { CrisisBanner } from "../components/CrisisBanner";
 import { Navigation } from "../components/Navigation";
@@ -22,10 +21,9 @@ function formatTime(iso?: string) {
   }
 }
 
-// ── Single message bubble (typewriter only on latest AI msg) ─────────────────
+// ── Single message bubble (staggered reveal on latest AI msg) ─────────────────
 interface BubbleProps {
   msg: ChatMessage;
-  isLatestAI: boolean;
   animate: boolean;
   onSpeak?: (text: string) => void;
   isSpeakingThis?: boolean;
@@ -35,10 +33,7 @@ interface BubbleProps {
   onStopTTS?: () => void;
 }
 
-function MessageBubble({ msg, isLatestAI, animate, onSpeak, isSpeakingThis, isPausedThis, onPauseTTS, onResumeTTS, onStopTTS }: BubbleProps) {
-  const { displayed, done } = useTypewriter(msg.content, isLatestAI && animate, 16);
-  const text = isLatestAI && animate ? displayed : msg.content;
-
+function MessageBubble({ msg, animate, onSpeak, isSpeakingThis, isPausedThis, onPauseTTS, onResumeTTS, onStopTTS }: BubbleProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 14, scale: 0.97 }}
@@ -63,10 +58,26 @@ function MessageBubble({ msg, isLatestAI, animate, onSpeak, isSpeakingThis, isPa
               ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-tr-sm"
               : "bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-slate-700/50 rounded-tl-sm"
           }`}>
-            {text}
-            {/* blinking cursor while typing */}
-            {isLatestAI && animate && !done && (
-              <span className="inline-block w-0.5 h-4 bg-teal-500 ml-0.5 align-middle animate-pulse" />
+            {msg.role === "model" && animate ? (
+              <div className="flex flex-wrap gap-x-1 gap-y-0.5">
+                {msg.content.split(" ").map((word, i) => (
+                  <motion.span
+                    key={i}
+                    initial={{ opacity: 0, y: 5, filter: "blur(4px)" }}
+                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                    transition={{ 
+                      duration: 0.4, 
+                      delay: i * 0.08,
+                      ease: "easeOut"
+                    }}
+                    className="inline-block"
+                  >
+                    {word}
+                  </motion.span>
+                ))}
+              </div>
+            ) : (
+              msg.content
             )}
           </div>
 
@@ -156,6 +167,7 @@ export function ResponsePage() {
     voiceURI: ttsVoice,
     lang: speechLang,
     onEnd: () => setSpeakingMsgIndex(-1),
+    onError: () => setSpeakingMsgIndex(-1),
   });
 
   useEffect(() => {
@@ -421,7 +433,6 @@ export function ResponsePage() {
                 <MessageBubble
                   key={index}
                   msg={msg}
-                  isLatestAI={msg.role === "model" && index === animateIndex}
                   animate={index === animateIndex}
                   onSpeak={ttsSupported ? (text) => handleSpeak(text, index) : undefined}
                   isSpeakingThis={isSpeaking && speakingMsgIndex === index}

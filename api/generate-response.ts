@@ -16,13 +16,17 @@ export default async function handler(req: Request) {
   }
 
   try {
-    const { messages, persona, systemPrompt, clientApiKey } = await req.json();
-    const apiKey = process.env.GEMINI_API_KEY || clientApiKey;
+    const { messages, persona, systemPrompt } = await req.json();
+    const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
-      return new Response(JSON.stringify({ 
-        error: 'API Key not configured on server. Please add your own API Key in Settings.' 
-      }), { status: 500 });
+      return new Response(
+        JSON.stringify({
+          error:
+            "GEMINI_API_KEY belum disetel di server (mis. Vercel → Settings → Environment Variables). Kunci tidak boleh dikirim dari browser.",
+        }),
+        { status: 503 }
+      );
     }
 
     let lastError = null;

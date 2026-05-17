@@ -63,8 +63,6 @@ interface AppContextType {
   deleteCurhat: (id: string) => void;
   toggleBookmark: (id: string) => void;
   clearAllCurhats: () => void;
-  apiKey: string;
-  setApiKey: (key: string) => void;
   aiName: string;
   setAiName: (name: string) => void;
   notificationsEnabled: boolean;
@@ -175,7 +173,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [darkMode, setDarkMode] = useState(false);
   const [currentCurhat, setCurrentCurhat] = useState<Curhat | null>(null);
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem("gemini_api_key") || import.meta.env.VITE_GEMINI_API_KEY || "");
   const [aiName, setAiName] = useState(() => localStorage.getItem("tenang_ai_name") || "Tenang AI");
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => localStorage.getItem("tenang_notif") === "true");
 
@@ -305,9 +302,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("tenang_capsules", JSON.stringify(capsules));
   }, [capsules]);
 
+  // Kunci Gemini tidak lagi disimpan di browser — hapus sisa lama sekali.
   useEffect(() => {
-    localStorage.setItem("gemini_api_key", apiKey);
-  }, [apiKey]);
+    try {
+      const flag = "tenang_gemini_key_migrated_v2";
+      if (!localStorage.getItem(flag)) {
+        localStorage.removeItem("gemini_api_key");
+        localStorage.setItem(flag, "1");
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("tenang_ai_name", aiName);
@@ -502,8 +506,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         deleteCurhat,
         toggleBookmark,
         clearAllCurhats,
-        apiKey,
-        setApiKey,
         aiName,
         setAiName,
         notificationsEnabled,

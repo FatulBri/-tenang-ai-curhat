@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Moon, Play, Pause, SkipForward } from "lucide-react";
+import { toast } from "sonner";
 import { useApp } from "../context/AppContext";
 import { useTextToSpeech } from "../utils/useVoice";
 import { Button } from "./ui/button";
@@ -42,64 +43,95 @@ const SLEEP_STORIES = [
   }
 ];
 
+const PAUSE_BETWEEN_MS = 1500;
+
 export function SleepStoryModal({ onClose }: Props) {
   const [story] = useState(() => SLEEP_STORIES[Math.floor(Math.random() * SLEEP_STORIES.length)]);
   const [currentPara, setCurrentPara] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const playingRef = useRef(false);
+  const paragraphIndexRef = useRef(0);
+  const advanceAfterParagraphRef = useRef<() => void>(() => {});
 
   const { ttsVoice, speechLang } = useApp();
-  const { speak, stop, isSpeaking } = useTextToSpeech({ voiceURI: ttsVoice, lang: speechLang, rate: 0.8 });
 
-  const readCurrentParagraph = (paraIndex: number) => {
-    if (paraIndex >= story.paragraphs.length) {
-      setIsFinished(true);
-      setIsPlaying(false);
-      return;
+  const clearBetweenTimer = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
     }
-    setCurrentPara(paraIndex);
-    speak(story.paragraphs[paraIndex]);
-
-    // Estimate reading time: ~100 words per minute at rate 0.8
-    const wordCount = story.paragraphs[paraIndex].split(" ").length;
-    const readTimeMs = (wordCount / 100) * 60 * 1000 * 1.3; // 1.3x buffer
-
-    timerRef.current = setTimeout(() => {
-      readCurrentParagraph(paraIndex + 1);
-    }, readTimeMs + 1500); // +1.5s pause between paragraphs
   };
+
+  const { speak, stop } = useTextToSpeech({
+    voiceURI: ttsVoice,
+    lang: speechLang,
+    rate: 0.8,
+    onEnd: () => advanceAfterParagraphRef.current(),
+    onError: () => {
+      clearBetweenTimer();
+      playingRef.current = false;
+      setIsPlaying(false);
+      toast.error("Gagal memutar suara cerita.");
+    },
+  });
+
+  useEffect(() => {
+    advanceAfterParagraphRef.current = () => {
+      if (!playingRef.current) return;
+      const paras = story.paragraphs;
+      const finished = paragraphIndexRef.current;
+      const next = finished + 1;
+      if (next >= paras.length) {
+        setIsFinished(true);
+        setIsPlaying(false);
+        playingRef.current = false;
+        return;
+      }
+      clearBetweenTimer();
+      timerRef.current = setTimeout(() => {
+        if (!playingRef.current) return;
+        paragraphIndexRef.current = next;
+        setCurrentPara(next);
+        speak(paras[next]);
+      }, PAUSE_BETWEEN_MS);
+    };
+  }, [speak, story]);
 
   const handlePlay = () => {
     if (isPlaying) {
-      // Pause
       stop();
-      if (timerRef.current) clearTimeout(timerRef.current);
+      clearBetweenTimer();
+      playingRef.current = false;
       setIsPlaying(false);
     } else {
-      // Play
       setIsPlaying(true);
-      readCurrentParagraph(currentPara);
+      playingRef.current = true;
+      paragraphIndexRef.current = currentPara;
+      speak(story.paragraphs[currentPara]);
     }
   };
 
   const handleNext = () => {
     stop();
-    if (timerRef.current) clearTimeout(timerRef.current);
+    clearBetweenTimer();
     if (currentPara < story.paragraphs.length - 1) {
       const next = currentPara + 1;
+      paragraphIndexRef.current = next;
       setCurrentPara(next);
       if (isPlaying) {
-        readCurrentParagraph(next);
+        playingRef.current = true;
+        speak(story.paragraphs[next]);
       }
     }
   };
 
-  // Cleanup
   useEffect(() => {
     return () => {
+      playingRef.current = false;
+      clearBetweenTimer();
       stop();
-      if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [stop]);
 
@@ -128,7 +160,12 @@ export function SleepStoryModal({ onClose }: Props) {
 
       {/* Close button */}
       <button
-        onClick={() => { stop(); onClose(); }}
+        onClick={() => {
+          playingRef.current = false;
+          clearBetweenTimer();
+          stop();
+          onClose();
+        }}
         className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors z-20"
       >
         <X className="w-5 h-5" />

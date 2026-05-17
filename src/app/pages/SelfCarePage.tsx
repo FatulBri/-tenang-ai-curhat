@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Clock, Lock, LockOpen, CheckCircle2, Circle, Calendar, Star } from "lucide-react";
+import { Trophy, Clock, Lock, LockOpen, CheckCircle2, Calendar, Star } from "lucide-react";
 import { useApp, Quest, TimeCapsule } from "../context/AppContext";
 import { Button } from "../components/ui/button";
 import { Navigation } from "../components/Navigation";

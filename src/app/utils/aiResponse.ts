@@ -64,8 +64,6 @@ export async function generateAIResponse(
   const systemPrompt = getSystemPrompt(persona, faceEmotion);
 
   try {
-    const localApiKey = localStorage.getItem("gemini_api_key") || "";
-
     const response = await fetch(API_ENDPOINT, {
       method: "POST",
       headers: {
@@ -78,8 +76,7 @@ export async function generateAIResponse(
         })),
         persona,
         systemPrompt,
-        clientApiKey: localApiKey
-      })
+      }),
     });
 
     if (!response.ok) {
@@ -125,7 +122,7 @@ export async function generateAIResponse(
     }
 
     return {
-      aiResponse: `Maaf, terjadi masalah teknis: ${error.message}. Mohon pastikan API Key sudah terpasang di Vercel Dashboard.`,
+      aiResponse: `Maaf, terjadi masalah teknis: ${error.message}. Jika Anda meng-host sendiri, setel variabel GEMINI_API_KEY di environment server (bukan di browser).`,
       mood: "😢 Error",
       category: "Error"
     };

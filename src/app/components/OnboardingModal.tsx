@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Shield, MessageCircle, Sparkles, ChevronRight, X, Key } from "lucide-react";
+import { Heart, Shield, MessageCircle, Sparkles, ChevronRight, X, Cloud } from "lucide-react";
 import { Button } from "./ui/button";
-import { useApp } from "../context/AppContext";
 
 const STORAGE_KEY = "tenang_onboarding_done";
 
@@ -28,28 +27,24 @@ const steps = [
   {
     icon: <Shield className="w-10 h-10 text-blue-500" />,
     gradient: "from-blue-400 to-indigo-400",
-    title: "100% Anonim & Rahasia 🔒",
-    desc: "Semua ceritamu tersimpan di perangkatmu sendiri. Tidak ada akun, tidak ada server, tidak ada yang tahu identitasmu.",
+    title: "Anonim & data di perangkatmu 🔒",
+    desc: "Riwayat curhat dan mood tersimpan di perangkat ini (bukan di akun cloud). Jaga perangkatmu tetap aman, terutama jika dipakai bersama.",
   },
   {
-    icon: <Key className="w-10 h-10 text-emerald-500" />,
+    icon: <Cloud className="w-10 h-10 text-emerald-500" />,
     gradient: "from-emerald-400 to-teal-400",
-    title: "Koneksikan AI 🏠",
-    desc: "Masukkan Gemini API Key Anda untuk mulai curhat. Jika belum punya, Anda bisa melewati langkah ini.",
-    isInput: true,
+    title: "AI dijalankan dari server aman",
+    desc: "Kunci API Gemini hanya ada di server pemilik aplikasi — tidak perlu kamu tempel di sini. Yang kamu tulis tetap privasi di perangkat; kunci tidak disimpan di browser.",
   },
 ];
 
 export function OnboardingModal() {
-  const { setApiKey, apiKey: currentKey } = useApp();
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState(0);
-  const [localKey, setLocalKey] = useState(currentKey || "");
 
   useEffect(() => {
     const done = localStorage.getItem(STORAGE_KEY);
     if (!done) {
-      // Small delay so page animations don't conflict
       const t = setTimeout(() => setVisible(true), 800);
       return () => clearTimeout(t);
     }
@@ -67,7 +62,6 @@ export function OnboardingModal() {
     <AnimatePresence>
       {visible && (
         <>
-          {/* Backdrop */}
           <motion.div
             key="backdrop"
             initial={{ opacity: 0 }}
@@ -77,7 +71,6 @@ export function OnboardingModal() {
             onClick={finish}
           />
 
-          {/* Modal */}
           <motion.div
             key="modal"
             initial={{ opacity: 0, scale: 0.88, y: 40 }}
@@ -86,20 +79,18 @@ export function OnboardingModal() {
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
             className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none"
           >
-            <div className="pointer-events-auto w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-slate-700/60 overflow-hidden">
+            <div className="pointer-events-auto relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-slate-700/60 overflow-hidden">
 
-              {/* Coloured top bar */}
               <div className={`h-2 w-full bg-gradient-to-r ${current.gradient}`} />
 
-              {/* Close */}
               <button
+                type="button"
                 onClick={finish}
                 className="absolute top-5 right-5 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
 
-              {/* Content */}
               <div className="px-8 pt-8 pb-6">
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -110,7 +101,6 @@ export function OnboardingModal() {
                     transition={{ duration: 0.25 }}
                     className="flex flex-col items-center text-center gap-5"
                   >
-                    {/* Icon with glow */}
                     <div className={`w-20 h-20 rounded-2xl flex items-center justify-center bg-gradient-to-br ${current.gradient} bg-opacity-10 p-4 shadow-lg`}>
                       {current.icon}
                     </div>
@@ -122,30 +112,15 @@ export function OnboardingModal() {
                         {current.desc}
                       </p>
                     </div>
-
-                    {current.isInput && (
-                      <div className="w-full mt-2">
-                        <input
-                          type="password"
-                          placeholder="Masukkan API Key (AIzaSy...)"
-                          value={localKey}
-                          onChange={(e) => setLocalKey(e.target.value)}
-                          className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/30 focus:outline-none transition-all"
-                        />
-                        <p className="text-[10px] text-gray-400 mt-2">
-                          Key ini disimpan aman di browser Anda.
-                        </p>
-                      </div>
-                    )}
                   </motion.div>
                 </AnimatePresence>
               </div>
 
-              {/* Step dots */}
               <div className="flex justify-center gap-1.5 pb-2">
                 {steps.map((_, i) => (
                   <button
                     key={i}
+                    type="button"
                     onClick={() => setStep(i)}
                     className={`h-1.5 rounded-full transition-all duration-300 ${
                       i === step
@@ -156,14 +131,11 @@ export function OnboardingModal() {
                 ))}
               </div>
 
-              {/* Actions */}
               <div className="px-8 pb-8 pt-4 flex gap-3">
                 {isLast ? (
                   <Button
-                    onClick={() => {
-                      if (localKey) setApiKey(localKey);
-                      finish();
-                    }}
+                    type="button"
+                    onClick={finish}
                     className={`w-full bg-gradient-to-r ${current.gradient} text-white rounded-xl py-6 font-semibold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all`}
                   >
                     Selesai & Mulai 🚀
@@ -171,6 +143,7 @@ export function OnboardingModal() {
                 ) : (
                   <>
                     <Button
+                      type="button"
                       variant="ghost"
                       onClick={finish}
                       className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-sm font-medium"
@@ -178,7 +151,8 @@ export function OnboardingModal() {
                       Lewati
                     </Button>
                     <Button
-                      onClick={() => setStep(s => s + 1)}
+                      type="button"
+                      onClick={() => setStep((s) => s + 1)}
                       className={`flex-1 bg-gradient-to-r ${current.gradient} text-white rounded-xl py-5 font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all`}
                     >
                       Lanjut <ChevronRight className="w-4 h-4 ml-1" />

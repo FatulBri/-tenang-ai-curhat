@@ -148,6 +148,7 @@ export function CurhatPage() {
       navigate("/response");
     } catch (error) {
       console.error("Error submitting curhat:", error);
+      toast.error("Gagal mengirim curhat. Periksa koneksi atau pastikan server punya GEMINI_API_KEY.");
     } finally {
       setIsSubmitting(false);
     }
@@ -173,6 +174,9 @@ export function CurhatPage() {
             />
           </div>
           <EmotionalAvatar emotion={currentEmotion} />
+          <p className="text-[9px] text-gray-400 dark:text-gray-500 max-w-[100px] text-center leading-tight">
+            Privasi Aman: Kamera hanya untuk baca ekspresi, tidak ada rekaman.
+          </p>
         </div>
       )}
 
@@ -214,6 +218,9 @@ export function CurhatPage() {
                   title={zenMode ? "Keluar Zen Mode" : "Aktifkan Zen Mode"}
                 >
                   {zenMode ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+                  <span className="absolute -bottom-6 right-0 w-max text-[9px] bg-black/80 text-white px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+                    {zenMode ? "Tampilan Biasa" : "Mode Fokus (Zen)"}
+                  </span>
                 </button>
               </div>
 
@@ -221,8 +228,11 @@ export function CurhatPage() {
               {!zenMode && (
               <div className="space-y-3">
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  Teman Bicara AI
+                  Ingin curhat dengan siapa?
                 </label>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 -mt-2">
+                  Setiap karakter memberikan perspektif dan gaya bicara yang berbeda.
+                </p>
                 <Select value={persona} onValueChange={setPersona}>
                   <SelectTrigger className="w-full bg-white/50 dark:bg-slate-800/50 border-purple-200/50 dark:border-purple-900/50 text-purple-700 dark:text-purple-300 rounded-xl h-12 focus:ring-2 focus:ring-purple-500/50">
                     <SelectValue placeholder="Pilih karakter AI..." />
@@ -295,15 +305,31 @@ export function CurhatPage() {
                 <div className="relative group">
                   {/* Glowing border effect */}
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-teal-400 to-purple-500 rounded-2xl blur opacity-0 group-focus-within:opacity-30 transition duration-500"></div>
-                  <textarea
-                    id="curhat-message"
-                    ref={textareaRef}
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Apa yang memberatkan langkahmu hari ini? Ceritakan pelan-pelan..."
-                    className="relative w-full min-h-[180px] p-5 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-gray-800 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none resize-none transition-all z-10 leading-relaxed overflow-hidden"
-                    disabled={isSubmitting}
-                  />
+                  <AnimatePresence mode="wait">
+                    {isSubmitting ? (
+                      <motion.div
+                        key="releasing"
+                        initial={{ opacity: 1, y: 0, scale: 1 }}
+                        animate={{ opacity: 0, y: -100, scale: 1.1, filter: "blur(10px)" }}
+                        transition={{ duration: 0.8, ease: "easeIn" }}
+                        className="absolute inset-0 p-5 z-20 pointer-events-none"
+                      >
+                        <p className="text-gray-800 dark:text-gray-100 leading-relaxed opacity-50 whitespace-pre-wrap">
+                          {message}
+                        </p>
+                      </motion.div>
+                    ) : (
+                      <textarea
+                        id="curhat-message"
+                        ref={textareaRef}
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        placeholder="Tuliskan saja apa yang kamu rasakan... Tidak ada kata yang salah di sini."
+                        className="relative w-full min-h-[180px] p-5 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-gray-800 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none resize-none transition-all z-10 leading-relaxed overflow-hidden"
+                        disabled={isSubmitting}
+                      />
+                    )}
+                  </AnimatePresence>
                   {/* Mic active overlay with waveform */}
                   <AnimatePresence>
                     {isListening && (
@@ -337,6 +363,16 @@ export function CurhatPage() {
                       </motion.div>
                     )}
                   </AnimatePresence>
+                  
+                  {/* Depth of Expression Meter */}
+                  <div className="absolute bottom-0 left-4 right-4 h-[2px] bg-gray-100 dark:bg-gray-800/50 rounded-full overflow-hidden z-20">
+                    <motion.div 
+                      className="h-full bg-gradient-to-r from-teal-400 to-purple-500"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(100, (message.length / 500) * 100)}%` }}
+                      transition={{ type: "spring", damping: 20, stiffness: 100 }}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -351,9 +387,12 @@ export function CurhatPage() {
                   className="w-full sm:w-auto bg-gradient-to-r from-teal-500 to-purple-600 hover:from-teal-400 hover:to-purple-500 text-white px-8 py-6 rounded-xl font-semibold shadow-[0_0_20px_rgba(20,184,166,0.2)] hover:shadow-[0_0_30px_rgba(168,85,247,0.3)] transition-all disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2 group relative overflow-hidden"
                 >
                   {isSubmitting ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      Analisis AI Berjalan...
+                    <span className="flex items-center gap-3">
+                      <div className="relative w-5 h-5">
+                        <div className="absolute inset-0 bg-white rounded-full animate-breathe blur-sm opacity-50"></div>
+                        <div className="absolute inset-1 bg-white rounded-full animate-pulse"></div>
+                      </div>
+                      Meresapi Ceritamu...
                     </span>
                   ) : (
                     <span className="flex items-center gap-2 relative z-10">

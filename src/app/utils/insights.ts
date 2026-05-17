@@ -7,7 +7,6 @@ export interface AIInsight {
 }
 
 export async function generateAIInsights(curhats: Curhat[], moods: MoodEntry[]): Promise<AIInsight> {
-  const apiKey = localStorage.getItem("gemini_api_key") || import.meta.env.VITE_GEMINI_API_KEY;
   const API_ENDPOINT = "/api/generate-response";
 
   // Filter last 7 days
@@ -50,8 +49,7 @@ export async function generateAIInsights(curhats: Curhat[], moods: MoodEntry[]):
         messages: [{ role: "user", content: context }],
         persona: "psikolog",
         systemPrompt: "Kamu adalah asisten analisis emosi AI yang bijak. Keluarkan HANYA JSON.",
-        clientApiKey: apiKey
-      })
+      }),
     });
 
     if (!response.ok) throw new Error("Failed to fetch insight");

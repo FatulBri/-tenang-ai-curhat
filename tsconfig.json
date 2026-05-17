@@ -9,7 +9,8 @@
         ],
         "module": "ESNext",
         "types": [
-            "vite/client"
+            "vite/client",
+            "node"
         ],
         "skipLibCheck": true,
         /* Bundler mode */
@@ -26,7 +27,8 @@
         "noFallthroughCasesInSwitch": true
     },
     "include": [
-        "src"
+        "src",
+        "api"
     ],
     "references": [
         {

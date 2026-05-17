@@ -16,7 +16,10 @@ export default async function handler(req: Request) {
   }
 
   try {
-    const { messages, persona, systemPrompt } = await req.json();
+    const { messages, systemPrompt } = await req.json() as {
+      messages: { role: string; content: string }[];
+      systemPrompt: string;
+    };
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {

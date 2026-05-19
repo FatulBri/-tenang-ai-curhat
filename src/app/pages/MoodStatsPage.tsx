@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from "react";
+import { useState, lazy, Suspense, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -90,12 +90,35 @@ export function MoodStatsPage() {
   const [insight, setInsight] = useState<AIInsight | null>(null);
   const [isLoadingInsight, setIsLoadingInsight] = useState(false);
 
-  const handleGenerateInsight = async () => {
+  const handleGenerateInsight = async (force = false) => {
+    const d = new Date();
+    const onejan = new Date(d.getFullYear(), 0, 1);
+    const week = Math.ceil(((d.getTime() - onejan.getTime()) / 86400000 + onejan.getDay() + 1) / 7);
+    const cacheKey = `tenang_insight_${d.getFullYear()}-W${week}`;
+
+    if (!force) {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          setInsight(JSON.parse(cached));
+          return;
+        } catch {
+          /* regenerate */
+        }
+      }
+    }
+
     setIsLoadingInsight(true);
     const result = await generateAIInsights(curhats, moods);
     setInsight(result);
+    localStorage.setItem(cacheKey, JSON.stringify(result));
     setIsLoadingInsight(false);
   };
+
+  useEffect(() => {
+    if (curhats.length === 0 && moods.length === 0) return;
+    handleGenerateInsight();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const moodCounts = moods.reduce((acc, entry) => {
     acc[entry.mood] = (acc[entry.mood] || 0) + 1; return acc;
@@ -212,7 +235,7 @@ export function MoodStatsPage() {
                 
                 {!insight && (
                   <Button 
-                    onClick={handleGenerateInsight}
+                    onClick={() => handleGenerateInsight(true)}
                     disabled={isLoadingInsight}
                     className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-6 rounded-2xl font-bold shadow-xl shadow-indigo-600/20 flex gap-2 transition-all hover:scale-105 active:scale-95"
                   >
@@ -271,7 +294,7 @@ export function MoodStatsPage() {
                     <div className="flex justify-center">
                       <Button 
                         variant="ghost" 
-                        onClick={handleGenerateInsight}
+                        onClick={() => handleGenerateInsight(true)}
                         disabled={isLoadingInsight}
                         className="text-xs text-indigo-400 hover:text-indigo-300"
                       >

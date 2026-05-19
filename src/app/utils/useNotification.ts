@@ -1,43 +1,77 @@
-import { useEffect } from "react";
+import { useEffect, useRef, type MutableRefObject } from "react";
 
-export function useNotification(enabled: boolean) {
-  const requestAndSchedule = async () => {
-    if (!("Notification" in window)) return;
+function msUntil(hour: number, minute: number): number {
+  const now = new Date();
+  const target = new Date();
+  target.setHours(hour, minute, 0, 0);
+  if (target <= now) target.setDate(target.getDate() + 1);
+  return target.getTime() - now.getTime();
+}
 
-    let permission = Notification.permission;
-    if (permission === "default") {
-      permission = await Notification.requestPermission();
-    }
-
-    if (permission !== "granted") return;
-
-    scheduleReminder();
-  };
-
-  function scheduleReminder() {
-    const now = new Date();
-    // Schedule for 20:00 today (or tomorrow if already past)
-    const target = new Date();
-    target.setHours(20, 0, 0, 0);
-    if (target <= now) target.setDate(target.getDate() + 1);
-
-    const delay = target.getTime() - now.getTime();
-    const t = setTimeout(() => {
-      new Notification("TENANG AI 💙", {
-        body: "Hei, sudah curhat hari ini belum? Yuk ceritakan perasaanmu!",
+function scheduleDaily(
+  hour: number,
+  minute: number,
+  tag: string,
+  title: string,
+  body: string,
+  timersRef: MutableRefObject<ReturnType<typeof setTimeout>[]>
+) {
+  const delay = msUntil(hour, minute);
+  const t = setTimeout(() => {
+    if (Notification.permission === "granted") {
+      new Notification(title, {
+        body,
         icon: "/icon-192.png",
         badge: "/icon-192.png",
-        tag: "tenang-daily-reminder",
+        tag,
       });
-      // Reschedule for next day
-      scheduleReminder();
-    }, delay);
+    }
+    scheduleDaily(hour, minute, tag, title, body, timersRef);
+  }, delay);
+  timersRef.current.push(t);
+}
 
-    return () => clearTimeout(t);
-  }
+export function useNotification(enabled: boolean) {
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
     if (!enabled) return;
-    requestAndSchedule();
-  }, [enabled]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!("Notification" in window)) return;
+
+    const setup = async () => {
+      let permission = Notification.permission;
+      if (permission === "default") {
+        permission = await Notification.requestPermission();
+      }
+      if (permission !== "granted") return;
+
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current = [];
+
+      scheduleDaily(
+        9,
+        0,
+        "tenang-mood-checkin",
+        "TENANG AI — Cek mood 💙",
+        "Bagaimana perasaanmu pagi ini? Luangkan sebentar untuk mencatat mood.",
+        timersRef
+      );
+
+      scheduleDaily(
+        20,
+        0,
+        "tenang-curhat-reminder",
+        "TENANG AI 💙",
+        "Sudah curhat hari ini? Ceritakan perasaanmu di ruang aman ini.",
+        timersRef
+      );
+    };
+
+    setup();
+
+    return () => {
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current = [];
+    };
+  }, [enabled]);
 }

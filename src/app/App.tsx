@@ -6,6 +6,8 @@ import { AmbientPlayer } from "./components/AmbientPlayer";
 import { OnboardingModal } from "./components/OnboardingModal";
 import { PinLock } from "./components/PinLock";
 import { DailyGachaModal } from "./components/DailyGachaModal";
+import { OfflineBanner } from "./components/OfflineBanner";
+import { AppNotifications } from "./components/AppNotifications";
 import { Toaster } from "sonner";
 
 const LandingPage = lazy(() => import("./pages/LandingPage").then((m) => ({ default: m.LandingPage })));
@@ -19,6 +21,7 @@ const SettingsPage = lazy(() => import("./pages/SettingsPage").then((m) => ({ de
 const VoiceCurhatPage = lazy(() => import("./pages/VoiceCurhatPage").then((m) => ({ default: m.VoiceCurhatPage })));
 const GardenPage = lazy(() => import("./pages/GardenPage").then((m) => ({ default: m.GardenPage })));
 const SelfCarePage = lazy(() => import("./pages/SelfCarePage").then((m) => ({ default: m.SelfCarePage })));
+const OfflinePage = lazy(() => import("./pages/OfflinePage").then((m) => ({ default: m.OfflinePage })));
 
 function RouteFallback() {
   return (
@@ -49,6 +52,8 @@ export default function App() {
           <OnboardingModal />
           <AmbientPlayer />
           <DailyGachaModal />
+          <OfflineBanner />
+          <AppNotifications />
 
           <Suspense fallback={<RouteFallback />}>
             <Routes>
@@ -63,6 +68,7 @@ export default function App() {
               <Route path="/voice-curhat" element={<VoiceCurhatPage />} />
               <Route path="/garden" element={<GardenPage />} />
               <Route path="/self-care" element={<SelfCarePage />} />
+              <Route path="/offline" element={<OfflinePage />} />
             </Routes>
           </Suspense>
 

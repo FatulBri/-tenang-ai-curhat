@@ -4,7 +4,7 @@ import { Sparkles, TrendingUp, RefreshCw, Send, User, ChevronDown, Copy, Share2,
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { useApp, ChatMessage } from "../context/AppContext";
-import { generateAIResponse, mapAIMoodToKey } from "../utils/aiResponse";
+import { generateAIResponseStream, mapAIMoodToKey, parseAIResultText } from "../utils/aiResponse";
 import { useTextToSpeech } from "../utils/useVoice";
 import { CrisisBanner } from "../components/CrisisBanner";
 import { Navigation } from "../components/Navigation";
@@ -148,6 +148,8 @@ export function ResponsePage() {
   const [animateIndex, setAnimateIndex] = useState<number>(-1);
   const [copied, setCopied] = useState(false);
   const [speakingMsgIndex, setSpeakingMsgIndex] = useState<number>(-1);
+  const [streamingPreview, setStreamingPreview] = useState<string | null>(null);
+  const initialReplyStarted = useRef(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -205,7 +207,75 @@ export function ResponsePage() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [currentCurhat?.messages, isSubmitting, scrollToBottom]);
+  }, [currentCurhat?.messages, isSubmitting, streamingPreview, scrollToBottom]);
+
+  const applyAIResult = useCallback(
+    (messages: ChatMessage[], aiResult: { aiResponse: string; mood: string; category: string }) => {
+      if (!currentCurhat) return;
+      const aiMsg: ChatMessage = {
+        role: "model",
+        content: aiResult.aiResponse,
+        timestamp: new Date().toISOString(),
+      };
+      const full: ChatMessage[] = [...messages, aiMsg];
+      updateCurhatMessages(currentCurhat.id, full);
+      setAnimateIndex(full.length - 1);
+
+      const moodKey = mapAIMoodToKey(aiResult.mood);
+      addMood({
+        id: Date.now().toString() + "_auto_reply",
+        mood: moodKey,
+        date: new Date(),
+      });
+
+      toast.success("AI sudah membalas! 💬", {
+        description: aiResult.aiResponse.slice(0, 80) + (aiResult.aiResponse.length > 80 ? "…" : ""),
+        duration: 4000,
+      });
+    },
+    [currentCurhat, updateCurhatMessages, addMood]
+  );
+
+  const runStreamingReply = useCallback(
+    async (baseMessages: ChatMessage[]) => {
+      if (!currentCurhat) return;
+      setIsSubmitting(true);
+      setStreamingPreview("");
+      try {
+        const aiResult = await generateAIResponseStream(
+          baseMessages,
+          currentCurhat.persona || "psikolog",
+          undefined,
+          {
+            onChunk: (raw) => {
+              try {
+                setStreamingPreview(parseAIResultText(raw).aiResponse);
+              } catch {
+                setStreamingPreview(raw.slice(0, 500));
+              }
+            },
+          }
+        );
+        setStreamingPreview(null);
+        applyAIResult(baseMessages, aiResult);
+      } catch {
+        toast.error("Gagal mendapatkan balasan AI. Coba lagi.", { duration: 3000 });
+        setStreamingPreview(null);
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [currentCurhat, applyAIResult]
+  );
+
+  // Balas otomatis saat datang dari CurhatPage (hanya pesan user)
+  useEffect(() => {
+    if (!currentCurhat || initialReplyStarted.current) return;
+    const last = currentCurhat.messages[currentCurhat.messages.length - 1];
+    if (last?.role !== "user") return;
+    initialReplyStarted.current = true;
+    runStreamingReply(currentCurhat.messages);
+  }, [currentCurhat, runStreamingReply]);
 
   useEffect(() => {
     const el = chatContainerRef.current;
@@ -247,32 +317,7 @@ export function ResponsePage() {
     ];
     updateCurhatMessages(currentCurhat.id, newMessages);
     setReplyMessage("");
-    setIsSubmitting(true);
-
-    try {
-      const aiResult = await generateAIResponse(newMessages, currentCurhat.persona || "psikolog");
-      const aiMsg: ChatMessage = { role: "model", content: aiResult.aiResponse, timestamp: new Date().toISOString() };
-      const full: ChatMessage[] = [...newMessages, aiMsg];
-      updateCurhatMessages(currentCurhat.id, full);
-      setAnimateIndex(full.length - 1); // animate the new AI message
-
-      // Auto-add to Mood Tracker
-      const moodKey = mapAIMoodToKey(aiResult.mood);
-      addMood({
-        id: Date.now().toString() + "_auto_reply",
-        mood: moodKey,
-        date: new Date()
-      });
-
-      toast.success("AI sudah membalas! 💬", {
-        description: aiResult.aiResponse.slice(0, 80) + (aiResult.aiResponse.length > 80 ? "…" : ""),
-        duration: 4000,
-      });
-    } catch {
-      toast.error("Gagal mendapatkan balasan AI. Coba lagi.", { duration: 3000 });
-    } finally {
-      setIsSubmitting(false);
-    }
+    await runStreamingReply(newMessages);
   };
 
   const copyToClipboard = () => {
@@ -449,11 +494,18 @@ export function ResponsePage() {
                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-400 to-purple-500 flex items-center justify-center flex-shrink-0 shadow-md mt-1">
                       <Sparkles className="w-4 h-4 text-white animate-pulse" />
                     </div>
+                    {streamingPreview ? (
+                      <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-white dark:bg-slate-800 border border-teal-200/50 dark:border-teal-700/30 text-sm text-gray-800 dark:text-gray-200 shadow-sm whitespace-pre-wrap">
+                        {streamingPreview}
+                        <span className="inline-block w-0.5 h-4 bg-teal-500 ml-0.5 animate-pulse align-middle" aria-hidden />
+                      </div>
+                    ) : (
                     <div className="px-5 py-3.5 rounded-2xl rounded-tl-sm bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700/50 flex items-center gap-1.5 shadow-sm">
                       <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: "0ms" }} />
                       <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: "150ms" }} />
                       <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: "300ms" }} />
                     </div>
+                    )}
                   </div>
                 </motion.div>
               )}

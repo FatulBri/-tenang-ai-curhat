@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { useApp } from "../context/AppContext";
-import { generateAIResponse, mapAIMoodToKey } from "../utils/aiResponse";
 import { useSpeechRecognition } from "../utils/useVoice";
 import { FaceEmotionDetector } from "../components/FaceEmotionDetector";
 import { Emotion } from "../utils/useFaceEmotion";
@@ -33,7 +32,7 @@ const ICEBREAKER_PROMPTS = [
 
 export function CurhatPage() {
   const navigate = useNavigate();
-  const { addCurhat, setCurrentCurhat, addMood, speechLang, faceDetectionEnabled, setThemeColor } = useApp();
+  const { addCurhat, setCurrentCurhat, speechLang, faceDetectionEnabled, setThemeColor } = useApp();
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [persona, setPersona] = useState("psikolog");
@@ -120,30 +119,17 @@ export function CurhatPage() {
     try {
       const now = new Date().toISOString();
       const initialUserMsg = { role: "user" as const, content: message, timestamp: now };
-      const aiResult = await generateAIResponse([initialUserMsg], persona, currentEmotion);
 
       const newCurhat = {
         id: Date.now().toString(),
-        messages: [
-          initialUserMsg,
-          { role: "model" as const, content: aiResult.aiResponse, timestamp: new Date().toISOString() }
-        ],
+        messages: [initialUserMsg],
         timestamp: new Date(),
-        mood: aiResult.mood,
-        category: aiResult.category,
+        mood: "💭 Menunggu",
+        category: "—",
         persona,
       };
 
       addCurhat(newCurhat);
-      
-      // Auto-add to Mood Tracker
-      const moodKey = mapAIMoodToKey(aiResult.mood);
-      addMood({
-        id: Date.now().toString() + "_auto",
-        mood: moodKey,
-        date: new Date()
-      });
-
       setCurrentCurhat(newCurhat);
       navigate("/response");
     } catch (error) {

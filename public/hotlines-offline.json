@@ -1,0 +1,35 @@
+{
+  "hotlines": [
+    {
+      "name": "Sejiwa (Into The Light)",
+      "number": "119",
+      "description": "Layanan kesehatan jiwa 24/7",
+      "type": "call"
+    },
+    {
+      "name": "Kemenkes RI",
+      "number": "500-454",
+      "description": "Layanan konseling kesehatan mental",
+      "type": "call"
+    },
+    {
+      "name": "HIMPSI",
+      "number": "(021) 319-02-925",
+      "description": "Himpunan Psikologi Indonesia",
+      "type": "call"
+    },
+    {
+      "name": "LSM Jangan Bunuh Diri",
+      "number": "(021) 9696-9293 / 7256-526 / 7257-826",
+      "description": "Konseling pencegahan bunuh diri",
+      "type": "call"
+    },
+    {
+      "name": "Yayasan Pulih",
+      "number": "021-788-42580",
+      "description": "Layanan psikososial",
+      "type": "call"
+    }
+  ],
+  "emergencyNote": "Untuk keadaan darurat medis, hubungi 118 atau 119."
+}

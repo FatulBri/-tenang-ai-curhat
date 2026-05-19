@@ -1,13 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, Phone, X, Heart } from "lucide-react";
-
-const CRISIS_KEYWORDS = [
-  "bunuh diri", "ingin mati", "mau mati", "pengen mati", "tidak mau hidup", "nggak mau hidup",
-  "mengakhiri hidup", "akhiri hidup", "self harm", "menyakiti diri", "nyakitin diri",
-  "hilang saja", "tidak ada gunanya hidup", "nggak ada gunanya hidup", "capek hidup",
-  "benci hidup", "tidak sanggup lagi", "tidak kuat lagi", "nggak kuat lagi", "menyerah hidup",
-];
+import { detectCrisis } from "../../../shared/crisis";
 
 interface CrisisBannerProps {
   text: string;
@@ -18,10 +12,7 @@ export function CrisisBanner({ text, onDismiss }: CrisisBannerProps) {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    if (!text) return;
-    const lower = text.toLowerCase();
-    const detected = CRISIS_KEYWORDS.some((kw) => lower.includes(kw));
-    setShow(detected);
+    setShow(detectCrisis(text));
   }, [text]);
 
   const dismiss = () => {
@@ -95,6 +86,5 @@ export function CrisisBanner({ text, onDismiss }: CrisisBannerProps) {
 
 /** Hook — returns true if crisis keywords detected in text */
 export function useDetectCrisis(text: string) {
-  const lower = text.toLowerCase();
-  return CRISIS_KEYWORDS.some((kw) => lower.includes(kw));
+  return detectCrisis(text);
 }

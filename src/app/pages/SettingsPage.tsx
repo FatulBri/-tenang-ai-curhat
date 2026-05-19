@@ -39,6 +39,10 @@ export function SettingsPage() {
     faceDetectionEnabled, setFaceDetectionEnabled,
     incognitoMode, setIncognitoMode,
     appPin, setAppPin,
+    notificationsEnabled, setNotificationsEnabled,
+    autoDeleteDays, setAutoDeleteDays,
+    reducedMotion, setReducedMotion,
+    fontScale, setFontScale,
   } = useApp();
 
   const [newPin, setNewPin] = useState("");
@@ -324,6 +328,73 @@ export function SettingsPage() {
                 </div>
                 
                 <div className="space-y-6">
+                  {/* Notifikasi check-in */}
+                  <div className="flex items-center justify-between p-4 bg-indigo-500/5 rounded-2xl border border-indigo-500/10">
+                    <div className="pr-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Bell className="w-4 h-4 text-indigo-500" />
+                        <h4 className="font-bold text-sm text-gray-800 dark:text-gray-200">Pengingat Harian</h4>
+                      </div>
+                      <p className="text-xs text-gray-500">Cek mood (09:00) dan curhat (20:00) via notifikasi browser.</p>
+                    </div>
+                    <button
+                      onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                      className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${
+                        notificationsEnabled ? "bg-indigo-500" : "bg-gray-300 dark:bg-slate-600"
+                      }`}
+                    >
+                      <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform ${
+                        notificationsEnabled ? "translate-x-5" : "translate-x-0.5"
+                      }`} />
+                    </button>
+                  </div>
+
+                  {/* Auto-delete */}
+                  <div className="space-y-2 p-4 bg-rose-500/5 rounded-2xl border border-rose-500/10">
+                    <Label className="text-xs font-bold uppercase tracking-widest text-gray-400">Hapus data otomatis</Label>
+                    <select
+                      value={autoDeleteDays}
+                      onChange={(e) => setAutoDeleteDays(parseInt(e.target.value, 10))}
+                      className="w-full h-12 px-4 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 text-sm"
+                    >
+                      <option value={0}>Tidak pernah</option>
+                      <option value={7}>Setelah 7 hari</option>
+                      <option value={30}>Setelah 30 hari</option>
+                      <option value={90}>Setelah 90 hari</option>
+                    </select>
+                    <p className="text-[10px] text-gray-500">Curhat dan mood lebih lama dari periode ini dihapus otomatis.</p>
+                  </div>
+
+                  {/* Aksesibilitas */}
+                  <div className="space-y-4 p-4 bg-violet-500/5 rounded-2xl border border-violet-500/10">
+                    <h4 className="font-bold text-sm text-gray-800 dark:text-gray-200">Aksesibilitas</h4>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">Kurangi animasi</span>
+                      <button
+                        onClick={() => setReducedMotion(!reducedMotion)}
+                        className={`relative w-12 h-7 rounded-full transition-colors ${
+                          reducedMotion ? "bg-violet-500" : "bg-gray-300 dark:bg-slate-600"
+                        }`}
+                      >
+                        <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform ${
+                          reducedMotion ? "translate-x-5" : "translate-x-0.5"
+                        }`} />
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-gray-500">Ukuran teks</Label>
+                      <select
+                        value={fontScale}
+                        onChange={(e) => setFontScale(e.target.value as "normal" | "large" | "x-large")}
+                        className="w-full h-11 px-4 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 text-sm"
+                      >
+                        <option value="normal">Normal</option>
+                        <option value="large">Besar</option>
+                        <option value="x-large">Sangat besar</option>
+                      </select>
+                    </div>
+                  </div>
+
                   {/* Incognito Mode */}
                   <div className="flex items-center justify-between p-4 bg-slate-500/5 rounded-2xl border border-slate-500/10">
                     <div className="pr-4">

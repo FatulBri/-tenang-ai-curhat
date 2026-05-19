@@ -107,6 +107,13 @@ interface AppContextType {
   capsules: TimeCapsule[];
   createCapsule: (message: string, days: number) => void;
   openCapsule: (id: string) => void;
+  // Privacy & a11y
+  autoDeleteDays: number;
+  setAutoDeleteDays: (days: number) => void;
+  reducedMotion: boolean;
+  setReducedMotion: (v: boolean) => void;
+  fontScale: "normal" | "large" | "x-large";
+  setFontScale: (scale: "normal" | "large" | "x-large") => void;
 }
 
 export interface Badge {
@@ -190,6 +197,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [appPin, setAppPin] = useState<string | null>(() => localStorage.getItem("tenang_pin") || null);
   const [isAppLocked, setIsAppLocked] = useState(() => !!localStorage.getItem("tenang_pin"));
   const [themeColor, setThemeColor] = useState("#14b8a6"); // Default teal-500
+  const [autoDeleteDays, setAutoDeleteDays] = useState(() =>
+    parseInt(localStorage.getItem("tenang_auto_delete_days") || "0", 10)
+  );
+  const [reducedMotion, setReducedMotion] = useState(() => {
+    const saved = localStorage.getItem("tenang_reduced_motion");
+    if (saved !== null) return saved === "true";
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  });
+  const [fontScale, setFontScale] = useState<"normal" | "large" | "x-large">(() => {
+    const saved = localStorage.getItem("tenang_font_scale");
+    if (saved === "large" || saved === "x-large") return saved;
+    return "normal";
+  });
 
   const [quests, setQuests] = useState<Quest[]>(() => {
     const saved = localStorage.getItem("tenang_quests");
@@ -365,6 +385,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.style.setProperty('--accent-color', themeColor);
   }, [themeColor]);
+
+  useEffect(() => {
+    localStorage.setItem("tenang_auto_delete_days", String(autoDeleteDays));
+  }, [autoDeleteDays]);
+
+  useEffect(() => {
+    localStorage.setItem("tenang_reduced_motion", reducedMotion ? "true" : "false");
+    document.documentElement.classList.toggle("reduce-motion", reducedMotion);
+  }, [reducedMotion]);
+
+  useEffect(() => {
+    localStorage.setItem("tenang_font_scale", fontScale);
+    document.documentElement.classList.remove("font-scale-normal", "font-scale-large", "font-scale-x-large");
+    document.documentElement.classList.add(
+      fontScale === "normal" ? "font-scale-normal" : fontScale === "large" ? "font-scale-large" : "font-scale-x-large"
+    );
+  }, [fontScale]);
+
+  const pruneOldData = () => {
+    if (autoDeleteDays <= 0) return;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - autoDeleteDays);
+    setCurhats((prev) => prev.filter((c) => new Date(c.timestamp) >= cutoff));
+    setMoods((prev) => prev.filter((m) => new Date(m.date) >= cutoff));
+  };
+
+  useEffect(() => {
+    pruneOldData();
+    const interval = setInterval(pruneOldData, 60 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [autoDeleteDays]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Lock app on visibility change
   useEffect(() => {
@@ -544,6 +595,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         capsules,
         createCapsule,
         openCapsule,
+        autoDeleteDays,
+        setAutoDeleteDays,
+        reducedMotion,
+        setReducedMotion,
+        fontScale,
+        setFontScale,
       }}
     >
       {children}

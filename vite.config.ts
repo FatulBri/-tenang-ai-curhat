@@ -16,7 +16,8 @@ export default defineConfig({
         enabled: true
       },
       workbox: {
-        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024 // 4 MiB
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,json,woff2}'],
       },
       manifest: {
         name: 'TENANG AI Anonymous Curhat',
@@ -46,8 +47,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      // Alias @ to the src directory
       '@': path.resolve(__dirname, './src'),
+      '@shared': path.resolve(__dirname, './shared'),
     },
   },
 })

@@ -128,3 +128,17 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* Aksesibilitas */
+html.font-scale-normal { font-size: 16px; }
+html.font-scale-large { font-size: 18px; }
+html.font-scale-x-large { font-size: 20px; }
+
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}

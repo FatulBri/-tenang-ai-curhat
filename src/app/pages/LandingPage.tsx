@@ -6,6 +6,7 @@ import { Footer } from "../components/Footer";
 import { motion } from "framer-motion";
 import { AffirmationWidget } from "../components/AffirmationWidget";
 import { DigitalGarden } from "../components/DigitalGarden";
+import { WeeklyInsightCard } from "../components/WeeklyInsightCard";
 
 export function LandingPage() {
   const navigate = useNavigate();
@@ -79,9 +80,13 @@ export function LandingPage() {
 
           <AffirmationWidget />
 
-          <div className="w-full flex justify-center py-8">
+          <motion.div variants={itemVariants} className="w-full max-w-2xl mx-auto pt-4">
+            <WeeklyInsightCard autoLoad compact />
+          </motion.div>
+
+          <motion.div variants={itemVariants} className="w-full flex justify-center py-8">
             <DigitalGarden />
-          </div>
+          </motion.div>
         </motion.div>
 
         {/* Features/Steps Grid */}
